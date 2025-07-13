@@ -10,11 +10,21 @@ class ClaudeService: ObservableObject {
     
     init(configManager: ConfigurationManager, urlSession: URLSession = .shared) {
         self.configManager = configManager
-        self.urlSession = urlSession
+        
+        // Create a custom URL session with timeout configuration
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 30.0
+        configuration.timeoutIntervalForResource = 60.0
+        configuration.waitsForConnectivity = false
+        
+        self.urlSession = urlSession == .shared ? URLSession(configuration: configuration) : urlSession
     }
     
     func enhanceText(_ text: String, with prompt: String) async throws -> String {
+        print("🔧 ClaudeService: Enhancing text (\(text.count) characters)")
+        
         guard let apiKey = configManager.claudeApiKey, !apiKey.isEmpty else {
+            print("❌ ClaudeService: API key missing or empty")
             throw ClaudeError.missingApiKey
         }
         
@@ -23,24 +33,32 @@ class ClaudeService: ObservableObject {
         let (data, response) = try await urlSession.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
+            print("❌ ClaudeService: Invalid response type")
             throw ClaudeError.invalidResponse
         }
         
         guard httpResponse.statusCode == 200 else {
+            print("❌ ClaudeService: API error (status: \(httpResponse.statusCode))")
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("❌ ClaudeService: Error details: \(errorString)")
+            }
             throw ClaudeError.apiError(httpResponse.statusCode, data)
         }
         
         let responseData = try JSONDecoder().decode(ClaudeResponse.self, from: data)
         
         guard let content = responseData.content.first?.text else {
+            print("❌ ClaudeService: No content in response")
             throw ClaudeError.noContent
         }
         
         // Extract JSON from the response content
         do {
             let enhancementResponse = try JSONExtractor.extractJSONPayload(from: content)
+            print("✅ ClaudeService: Enhancement completed successfully")
             return enhancementResponse.enhancedText
         } catch {
+            print("❌ ClaudeService: JSON extraction failed: \(error)")
             throw ClaudeError.invalidJSONResponse(error)
         }
     }
@@ -55,7 +73,8 @@ class ClaudeService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.timeoutInterval = timeout
+        request.timeoutInterval = 30.0
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         
         let fullPrompt = """
         \(prompt)
@@ -78,7 +97,12 @@ class ClaudeService: ObservableObject {
             ]
         )
         
-        request.httpBody = try JSONEncoder().encode(requestBody)
+        do {
+            request.httpBody = try JSONEncoder().encode(requestBody)
+        } catch {
+            print("❌ ClaudeService: Failed to encode request body: \(error)")
+            throw error
+        }
         
         return request
     }

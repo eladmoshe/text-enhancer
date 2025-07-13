@@ -111,8 +111,12 @@ class ShortcutManager: ObservableObject {
     private func handleShortcut(with hotKeyID: EventHotKeyID) {
         // Find the shortcut by index (ID-1 since we start IDs at 1)
         let index = Int(hotKeyID.id) - 1
+        
         if index >= 0 && index < registeredShortcuts.count {
+            print("🔧 ShortcutManager: Triggered shortcut: \(registeredShortcuts[index].name)")
             handleShortcut(registeredShortcuts[index])
+        } else {
+            print("⚠️  ShortcutManager: Invalid shortcut index: \(index)")
         }
     }
     

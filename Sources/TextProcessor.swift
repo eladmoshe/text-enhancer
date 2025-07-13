@@ -184,46 +184,81 @@ class TextProcessor: ObservableObject {
     }
     
     func processSelectedText(with prompt: String, using provider: APIProvider) async {
-        // Check accessibility permissions first
-        if !accessibilityChecker.isAccessibilityEnabled() {
-            await accessibilityChecker.requestAccessibilityPermissions()
-            
-            // Check again after prompting
-            guard accessibilityChecker.isAccessibilityEnabled() else {
-                await alertPresenter.showError("Accessibility permissions are required to capture and replace text. Please grant permissions in System Settings > Privacy & Security > Accessibility.")
-                return
-            }
-        }
-        
-        // Create appropriate API service
-        guard let apiService = APIProviderFactory.createService(for: provider, configManager: configManager) else {
-            await alertPresenter.showError("API provider \(provider.displayName) is not configured or enabled.")
-            return
-        }
+        print("🔧 TextProcessor: Starting text processing with provider: \(provider)")
         
         // Notify that processing has started
         NotificationCenter.default.post(name: .textProcessingStarted, object: nil)
         
+        // Ensure we always send the finished notification
         defer {
-            // Notify that processing has finished
+            print("🔧 TextProcessor: Sending textProcessingFinished notification")
             NotificationCenter.default.post(name: .textProcessingFinished, object: nil)
         }
         
-        do {
-            // Get selected text
-            guard let selectedText = textSelectionProvider.getSelectedText(), !selectedText.isEmpty else {
-                await alertPresenter.showError("No text selected")
+        // Add timeout to prevent hanging
+        let timeoutTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: 45_000_000_000) // 45 seconds
+                print("⚠️  TextProcessor: Processing timeout reached (45 seconds)")
+            } catch {
+                // Timeout task was cancelled, which is expected
+            }
+        }
+        
+        let processingTask = Task {
+            // Check accessibility permissions first
+            if !accessibilityChecker.isAccessibilityEnabled() {
+                await accessibilityChecker.requestAccessibilityPermissions()
+                
+                // Check again after prompting
+                guard accessibilityChecker.isAccessibilityEnabled() else {
+                    await alertPresenter.showError("Accessibility permissions are required to capture and replace text. Please grant permissions in System Settings > Privacy & Security > Accessibility.")
+                    return
+                }
+            }
+            
+            // Create appropriate API service
+            guard let apiService = APIProviderFactory.createService(for: provider, configManager: configManager) else {
+                await alertPresenter.showError("API provider \(provider.displayName) is not configured or enabled.")
                 return
             }
             
-            // Process with the appropriate API service
-            let enhancedText = try await apiService.enhanceText(selectedText, with: prompt)
+            do {
+                // Get selected text
+                guard let selectedText = textSelectionProvider.getSelectedText(), !selectedText.isEmpty else {
+                    await alertPresenter.showError("No text selected")
+                    return
+                }
+                print("🔧 TextProcessor: Processing \(selectedText.count) characters")
+                
+                // Process with the appropriate API service
+                let enhancedText = try await apiService.enhanceText(selectedText, with: prompt)
+                
+                // Replace selected text
+                await textReplacer.replaceSelectedText(with: enhancedText)
+                print("✅ TextProcessor: Text replacement completed")
+                
+            } catch {
+                print("❌ TextProcessor: Error during processing: \(error)")
+                await alertPresenter.showError("Failed to enhance text: \(error.localizedDescription)")
+            }
+        }
+        
+        // Wait for either processing to complete or timeout
+        _ = await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await processingTask.value
+            }
+            group.addTask {
+                await timeoutTask.value
+            }
             
-            // Replace selected text
-            await textReplacer.replaceSelectedText(with: enhancedText)
+            // Wait for the first task to complete
+            await group.next()
             
-        } catch {
-            await alertPresenter.showError("Failed to enhance text: \(error.localizedDescription)")
+            // Cancel the remaining tasks
+            processingTask.cancel()
+            timeoutTask.cancel()
         }
     }
 } 
