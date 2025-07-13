@@ -38,7 +38,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         shortcutManager = ShortcutManager(textProcessor: textProcessor, configManager: configManager)
         
         // Initialize menu bar manager
-        menuBarManager = MenuBarManager(shortcutManager: shortcutManager, configManager: configManager)
+        menuBarManager = MenuBarManager(shortcutManager: shortcutManager, configManager: configManager, textProcessor: textProcessor)
         
         // Setup menu bar
         setupMenuBar()

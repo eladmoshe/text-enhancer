@@ -5,14 +5,16 @@ import UserNotifications
 class MenuBarManager: ObservableObject {
     private let shortcutManager: ShortcutManager
     private let configManager: ConfigurationManager
+    private let textProcessor: TextProcessor
     private var statusItem: NSStatusItem?
     @Published var isProcessing = false
     private var animationTimer: Timer?
     private var animationPhase = 0
     
-    init(shortcutManager: ShortcutManager, configManager: ConfigurationManager) {
+    init(shortcutManager: ShortcutManager, configManager: ConfigurationManager, textProcessor: TextProcessor) {
         self.shortcutManager = shortcutManager
         self.configManager = configManager
+        self.textProcessor = textProcessor
         
         // Listen for processing status changes
         NotificationCenter.default.addObserver(
@@ -47,7 +49,7 @@ class MenuBarManager: ObservableObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        // Shortcut info - display all configured shortcuts
+        // Shortcut actions - make them clickable from menu
         let shortcuts = configManager.configuration.shortcuts
         if shortcuts.isEmpty {
             let noShortcutsItem = NSMenuItem(title: "No shortcuts configured", action: nil, keyEquivalent: "")
@@ -56,9 +58,11 @@ class MenuBarManager: ObservableObject {
         } else {
             for shortcut in shortcuts {
                 let shortcutDisplay = formatShortcutDisplay(shortcut.modifiers, shortcut.keyCode)
-                let shortcutInfoItem = NSMenuItem(title: "\(shortcutDisplay) - \(shortcut.name)", action: nil, keyEquivalent: "")
-                shortcutInfoItem.isEnabled = false
-                menu.addItem(shortcutInfoItem)
+                let shortcutMenuItem = NSMenuItem(title: "\(shortcut.name)", action: #selector(handleMenuShortcut(_:)), keyEquivalent: "")
+                shortcutMenuItem.target = self
+                shortcutMenuItem.representedObject = shortcut
+                shortcutMenuItem.toolTip = "Shortcut: \(shortcutDisplay)"
+                menu.addItem(shortcutMenuItem)
             }
         }
 
@@ -98,6 +102,14 @@ class MenuBarManager: ObservableObject {
         case 26: return "9"
         case 29: return "0"
         default: return "Key\(keyCode)"
+        }
+    }
+    
+    @objc func handleMenuShortcut(_ sender: NSMenuItem) {
+        guard let shortcut = sender.representedObject as? ShortcutConfiguration else { return }
+        
+        Task {
+            await textProcessor.processSelectedText(with: shortcut.prompt)
         }
     }
     
