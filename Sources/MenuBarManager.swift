@@ -4,6 +4,7 @@ import SwiftUI
 class MenuBarManager: ObservableObject {
     private let shortcutManager: ShortcutManager
     private let configManager: ConfigurationManager
+    private var statusItem: NSStatusItem?
     @Published var isProcessing = false
     
     init(shortcutManager: ShortcutManager, configManager: ConfigurationManager) {
@@ -27,34 +28,36 @@ class MenuBarManager: ObservableObject {
     }
     
     func setupMenu(for statusItem: NSStatusItem) {
+        self.statusItem = statusItem
+        
         let menu = NSMenu()
         
         // Status item
         let statusMenuItem = NSMenuItem(title: "TextEnhancer", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
         menu.addItem(statusMenuItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
+
         // Shortcut info
         let shortcutInfoItem = NSMenuItem(title: "⌃⌥1 - Improve Text", action: nil, keyEquivalent: "")
         shortcutInfoItem.isEnabled = false
         menu.addItem(shortcutInfoItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
+
         // Configuration info
         let configItem = NSMenuItem(title: "Edit config.json to configure", action: nil, keyEquivalent: "")
         configItem.isEnabled = false
         menu.addItem(configItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
+
         // Quit
         let quitItem = NSMenuItem(title: "Quit TextEnhancer", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-        
+
         statusItem.menu = menu
     }
     
@@ -78,22 +81,33 @@ class MenuBarManager: ObservableObject {
         }
     }
     
-    private func updateStatusIcon() {
-        guard let appDelegate = NSApp.delegate as? AppDelegate,
-              let statusItem = appDelegate.statusItem,
+    func updateStatusIcon() {
+        guard let statusItem = self.statusItem,
               let button = statusItem.button else { return }
         
-        // Clear any existing title
+        // Clear any existing content
+        button.image = nil
         button.title = ""
         
-        // Use proper SF Symbol icons
+        // Use appropriate SF Symbols with fallbacks
         if isProcessing {
-            button.image = NSImage(systemSymbolName: "wand.and.stars.inverse", accessibilityDescription: "Processing...")
+            if let image = NSImage(systemSymbolName: "wand.and.stars.inverse", accessibilityDescription: "Processing...") {
+                button.image = image
+                button.image?.size = NSSize(width: 16, height: 16)
+                button.image?.isTemplate = true
+            } else {
+                button.title = "⏳"
+            }
         } else {
-            button.image = NSImage(systemSymbolName: "wand.and.stars", accessibilityDescription: "Text Enhancer")
+            if let image = NSImage(systemSymbolName: "wand.and.stars", accessibilityDescription: "Text Enhancer") {
+                button.image = image
+                button.image?.size = NSSize(width: 16, height: 16)
+                button.image?.isTemplate = true
+            } else {
+                button.title = "✨"
+            }
         }
         
-        button.image?.size = NSSize(width: 18, height: 18)
         button.appearsDisabled = false
     }
 }

@@ -56,13 +56,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "wand.and.stars", accessibilityDescription: "Text Enhancer")
-            button.image?.size = NSSize(width: 18, height: 18)
             button.toolTip = "TextEnhancer - Enhance selected text"
         }
         
-        // Use the MenuBarManager to setup the menu
+        // Use the MenuBarManager to setup the menu and icon
         menuBarManager.setupMenu(for: statusItem)
+        
+        // Ensure the initial icon is properly set
+        menuBarManager.updateStatusIcon()
     }
     
     private func requestAccessibilityPermissions() {

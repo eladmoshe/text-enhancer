@@ -87,7 +87,6 @@ class TextProcessor: ObservableObject {
         // Use the pasteboard to replace selected text
         await MainActor.run {
             let pasteboard = NSPasteboard.general
-            let originalContents = pasteboard.pasteboardItems
             
             // Clear and set new text
             pasteboard.clearContents()
@@ -96,13 +95,8 @@ class TextProcessor: ObservableObject {
             // Simulate Cmd+V to paste
             simulateKeyPress(keyCode: 9, modifiers: [.maskCommand]) // V key with Cmd
             
-            // Restore original pasteboard contents after a delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                pasteboard.clearContents()
-                if let originalContents = originalContents {
-                    pasteboard.writeObjects(originalContents)
-                }
-            }
+            // Note: We don't restore original pasteboard contents to avoid the crash
+            // This is a reasonable trade-off for a text enhancement tool
         }
     }
     
