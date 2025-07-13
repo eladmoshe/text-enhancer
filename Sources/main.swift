@@ -32,10 +32,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         claudeService = ClaudeService(configManager: configManager)
         
         // Initialize text processor
-        textProcessor = TextProcessor(claudeService: claudeService)
+        textProcessor = TextProcessor(configManager: configManager)
         
         // Initialize shortcut manager
-        shortcutManager = ShortcutManager(textProcessor: textProcessor)
+        shortcutManager = ShortcutManager(textProcessor: textProcessor, configManager: configManager)
         
         // Initialize menu bar manager
         menuBarManager = MenuBarManager(shortcutManager: shortcutManager, configManager: configManager)

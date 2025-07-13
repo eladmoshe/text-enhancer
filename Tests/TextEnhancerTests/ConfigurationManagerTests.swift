@@ -54,7 +54,8 @@ final class ConfigurationManagerTests: XCTestCase {
             showStatusIcon: true,
             enableNotifications: true,
             autoSave: true,
-            logLevel: "info"
+            logLevel: "info",
+            apiProviders: nil
         )
         
         let configData = try JSONEncoder().encode(config)
@@ -85,7 +86,8 @@ final class ConfigurationManagerTests: XCTestCase {
                     name: "Test Shortcut",
                     keyCode: 42,
                     modifiers: [.command, .shift],
-                    prompt: "Test prompt"
+                    prompt: "Test prompt",
+                    provider: nil
                 )
             ],
             maxTokens: 2000,
@@ -93,7 +95,8 @@ final class ConfigurationManagerTests: XCTestCase {
             showStatusIcon: false,
             enableNotifications: false,
             autoSave: false,
-            logLevel: "debug"
+            logLevel: "debug",
+            apiProviders: nil
         )
         
         configManager.saveConfiguration(modifiedConfig)
@@ -131,7 +134,8 @@ final class ConfigurationManagerTests: XCTestCase {
             showStatusIcon: true,
             enableNotifications: true,
             autoSave: true,
-            logLevel: "warn"
+            logLevel: "warn",
+            apiProviders: nil
         )
         
         let configData = try JSONEncoder().encode(fallbackConfig)
@@ -162,7 +166,8 @@ final class ConfigurationManagerTests: XCTestCase {
             showStatusIcon: true,
             enableNotifications: true,
             autoSave: true,
-            logLevel: "info"
+            logLevel: "info",
+            apiProviders: nil
         )
         
         let fallbackConfig = AppConfiguration(
@@ -173,7 +178,8 @@ final class ConfigurationManagerTests: XCTestCase {
             showStatusIcon: true,
             enableNotifications: true,
             autoSave: true,
-            logLevel: "warn"
+            logLevel: "warn",
+            apiProviders: nil
         )
         
         let localData = try JSONEncoder().encode(localConfig)

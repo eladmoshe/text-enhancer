@@ -1,11 +1,14 @@
 import AppKit
 import SwiftUI
+import UserNotifications
 
 class MenuBarManager: ObservableObject {
     private let shortcutManager: ShortcutManager
     private let configManager: ConfigurationManager
     private var statusItem: NSStatusItem?
     @Published var isProcessing = false
+    private var animationTimer: Timer?
+    private var animationPhase = 0
     
     init(shortcutManager: ShortcutManager, configManager: ConfigurationManager) {
         self.shortcutManager = shortcutManager
@@ -25,6 +28,11 @@ class MenuBarManager: ObservableObject {
             name: .textProcessingFinished,
             object: nil
         )
+        
+        // Request notification permissions if enabled
+        if configManager.configuration.enableNotifications {
+            requestNotificationPermissions()
+        }
     }
     
     func setupMenu(for statusItem: NSStatusItem) {
@@ -39,10 +47,20 @@ class MenuBarManager: ObservableObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        // Shortcut info
-        let shortcutInfoItem = NSMenuItem(title: "⌃⌥1 - Improve Text", action: nil, keyEquivalent: "")
-        shortcutInfoItem.isEnabled = false
-        menu.addItem(shortcutInfoItem)
+        // Shortcut info - display all configured shortcuts
+        let shortcuts = configManager.configuration.shortcuts
+        if shortcuts.isEmpty {
+            let noShortcutsItem = NSMenuItem(title: "No shortcuts configured", action: nil, keyEquivalent: "")
+            noShortcutsItem.isEnabled = false
+            menu.addItem(noShortcutsItem)
+        } else {
+            for shortcut in shortcuts {
+                let shortcutDisplay = formatShortcutDisplay(shortcut.modifiers, shortcut.keyCode)
+                let shortcutInfoItem = NSMenuItem(title: "\(shortcutDisplay) - \(shortcut.name)", action: nil, keyEquivalent: "")
+                shortcutInfoItem.isEnabled = false
+                menu.addItem(shortcutInfoItem)
+            }
+        }
 
         menu.addItem(NSMenuItem.separator())
 
@@ -61,7 +79,27 @@ class MenuBarManager: ObservableObject {
         statusItem.menu = menu
     }
     
-
+    private func formatShortcutDisplay(_ modifiers: [ModifierKey], _ keyCode: Int) -> String {
+        let modifierString = modifiers.map { $0.displayName }.joined()
+        let keyName = keyCodeToString(keyCode)
+        return "\(modifierString)\(keyName)"
+    }
+    
+    private func keyCodeToString(_ keyCode: Int) -> String {
+        switch keyCode {
+        case 18: return "1"
+        case 19: return "2"
+        case 20: return "3"
+        case 21: return "4"
+        case 22: return "5"
+        case 23: return "6"
+        case 24: return "7"
+        case 25: return "8"
+        case 26: return "9"
+        case 29: return "0"
+        default: return "Key\(keyCode)"
+        }
+    }
     
     @objc private func quitApp() {
         NSApp.terminate(nil)
@@ -71,13 +109,62 @@ class MenuBarManager: ObservableObject {
         DispatchQueue.main.async {
             self.isProcessing = true
             self.updateStatusIcon()
+            self.startProcessingAnimation()
+            self.showNotification(title: "TextEnhancer", message: "Processing text...", isStarting: true)
         }
     }
     
     @objc private func processingFinished() {
         DispatchQueue.main.async {
             self.isProcessing = false
+            self.stopProcessingAnimation()
             self.updateStatusIcon()
+            self.showNotification(title: "TextEnhancer", message: "Text enhancement complete!", isStarting: false)
+        }
+    }
+    
+    private func startProcessingAnimation() {
+        // Stop any existing animation
+        animationTimer?.invalidate()
+        animationPhase = 0
+        
+        // Start new animation timer
+        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            self?.animateProcessingIcon()
+        }
+    }
+    
+    private func stopProcessingAnimation() {
+        animationTimer?.invalidate()
+        animationTimer = nil
+        animationPhase = 0
+    }
+    
+    private func animateProcessingIcon() {
+        guard let statusItem = self.statusItem,
+              let button = statusItem.button else { return }
+        
+        animationPhase = (animationPhase + 1) % 4
+        
+        // Create animated icons
+        let animationIcons = ["⏳", "⌛", "⏳", "⌛"]
+        let animationSymbols = [
+            "wand.and.stars.inverse",
+            "sparkles",
+            "wand.and.rays.inverse",
+            "sparkles"
+        ]
+        
+        // Try to use SF Symbols first
+        if let image = NSImage(systemSymbolName: animationSymbols[animationPhase], accessibilityDescription: "Processing...") {
+            button.image = image
+            button.image?.size = NSSize(width: 16, height: 16)
+            button.image?.isTemplate = true
+            button.title = ""
+        } else {
+            // Fallback to text animation
+            button.image = nil
+            button.title = animationIcons[animationPhase]
         }
     }
     
@@ -91,6 +178,7 @@ class MenuBarManager: ObservableObject {
         
         // Use appropriate SF Symbols with fallbacks
         if isProcessing {
+            // This will be overridden by animation, but set initial state
             if let image = NSImage(systemSymbolName: "wand.and.stars.inverse", accessibilityDescription: "Processing...") {
                 button.image = image
                 button.image?.size = NSSize(width: 16, height: 16)
@@ -109,6 +197,48 @@ class MenuBarManager: ObservableObject {
         }
         
         button.appearsDisabled = false
+    }
+    
+    private func requestNotificationPermissions() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error = error {
+                print("⚠️  Notification permission error: \(error)")
+            } else if granted {
+                print("✅ Notification permissions granted")
+            } else {
+                print("❌ Notification permissions denied")
+            }
+        }
+    }
+    
+    private func showNotification(title: String, message: String, isStarting: Bool) {
+        guard configManager.configuration.enableNotifications else { return }
+        
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = message
+        content.sound = UNNotificationSound.default
+        
+        // Different icons for different states
+        if isStarting {
+            content.badge = 1
+        } else {
+            content.badge = 0
+        }
+        
+        let identifier = isStarting ? "text-processing-started" : "text-processing-finished"
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("⚠️  Failed to show notification: \(error)")
+            }
+        }
+    }
+    
+    deinit {
+        animationTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
     }
 }
 

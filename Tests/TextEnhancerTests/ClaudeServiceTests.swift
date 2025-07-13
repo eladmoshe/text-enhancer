@@ -34,7 +34,8 @@ final class ClaudeServiceTests: XCTestCase {
             showStatusIcon: true,
             enableNotifications: true,
             autoSave: true,
-            logLevel: "info"
+            logLevel: "info",
+            apiProviders: nil
         )
         
         let configData = try! JSONEncoder().encode(config)

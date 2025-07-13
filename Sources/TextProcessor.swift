@@ -1,58 +1,34 @@
 import AppKit
 import ApplicationServices
 
-class TextProcessor: ObservableObject {
-    private let claudeService: ClaudeService
-    
-    init(claudeService: ClaudeService) {
-        self.claudeService = claudeService
-    }
-    
-    func processSelectedText(with enhancementType: EnhancementType) async {
-        // Check accessibility permissions first
-        let accessEnabled = AXIsProcessTrusted()
-        if !accessEnabled {
-            // Prompt for permissions only when user tries to use the feature
-            await MainActor.run {
-                if let appDelegate = NSApp.delegate as? AppDelegate {
-                    appDelegate.promptForAccessibilityPermissions()
-                }
-            }
-            
-            // Check again after prompting
-            guard AXIsProcessTrusted() else {
-                await showError("Accessibility permissions are required to capture and replace text. Please grant permissions in System Settings > Privacy & Security > Accessibility.")
-                return
-            }
-        }
-        
-        // Notify that processing has started
-        NotificationCenter.default.post(name: .textProcessingStarted, object: nil)
-        
-        defer {
-            // Notify that processing has finished
-            NotificationCenter.default.post(name: .textProcessingFinished, object: nil)
-        }
-        
-        do {
-            // Get selected text
-            guard let selectedText = getSelectedText(), !selectedText.isEmpty else {
-                await showError("No text selected")
-                return
-            }
-            
-            // Process with Claude
-            let enhancedText = try await claudeService.enhanceText(selectedText, with: enhancementType.prompt)
-            
-            // Replace selected text
-            await replaceSelectedText(with: enhancedText)
-            
-        } catch {
-            await showError("Failed to enhance text: \(error.localizedDescription)")
-        }
-    }
-    
-    private func getSelectedText() -> String? {
+// MARK: - Protocols
+
+protocol TextSelectionProvider {
+    func getSelectedText() -> String?
+}
+
+protocol TextReplacer {
+    func replaceSelectedText(with newText: String) async
+}
+
+protocol AccessibilityChecker {
+    func isAccessibilityEnabled() -> Bool
+    func requestAccessibilityPermissions() async
+}
+
+protocol PasteboardManager {
+    func setString(_ string: String)
+    func simulateKeyPress(keyCode: CGKeyCode, modifiers: CGEventFlags)
+}
+
+protocol AlertPresenter {
+    func showError(_ message: String) async
+}
+
+// MARK: - Default Implementations
+
+class DefaultTextSelectionProvider: TextSelectionProvider {
+    func getSelectedText() -> String? {
         // Create a system-wide accessibility object
         let systemWideElement = AXUIElementCreateSystemWide()
         
@@ -82,25 +58,45 @@ class TextProcessor: ObservableObject {
         
         return nil
     }
+}
+
+class DefaultTextReplacer: TextReplacer {
+    private let pasteboardManager: PasteboardManager
     
-    private func replaceSelectedText(with newText: String) async {
-        // Use the pasteboard to replace selected text
-        await MainActor.run {
-            let pasteboard = NSPasteboard.general
-            
-            // Clear and set new text
-            pasteboard.clearContents()
-            pasteboard.setString(newText, forType: .string)
-            
-            // Simulate Cmd+V to paste
-            simulateKeyPress(keyCode: 9, modifiers: [.maskCommand]) // V key with Cmd
-            
-            // Note: We don't restore original pasteboard contents to avoid the crash
-            // This is a reasonable trade-off for a text enhancement tool
-        }
+    init(pasteboardManager: PasteboardManager) {
+        self.pasteboardManager = pasteboardManager
     }
     
-    private func simulateKeyPress(keyCode: CGKeyCode, modifiers: CGEventFlags) {
+    func replaceSelectedText(with newText: String) async {
+        await MainActor.run {
+            pasteboardManager.setString(newText)
+            pasteboardManager.simulateKeyPress(keyCode: 9, modifiers: [.maskCommand]) // V key with Cmd
+        }
+    }
+}
+
+class DefaultAccessibilityChecker: AccessibilityChecker {
+    func isAccessibilityEnabled() -> Bool {
+        return AXIsProcessTrusted()
+    }
+    
+    func requestAccessibilityPermissions() async {
+        await MainActor.run {
+            if let appDelegate = NSApp.delegate as? AppDelegate {
+                appDelegate.promptForAccessibilityPermissions()
+            }
+        }
+    }
+}
+
+class DefaultPasteboardManager: PasteboardManager {
+    func setString(_ string: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(string, forType: .string)
+    }
+    
+    func simulateKeyPress(keyCode: CGKeyCode, modifiers: CGEventFlags) {
         let keyDownEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true)
         let keyUpEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false)
         
@@ -110,14 +106,124 @@ class TextProcessor: ObservableObject {
         keyDownEvent?.post(tap: .cghidEventTap)
         keyUpEvent?.post(tap: .cghidEventTap)
     }
-    
+}
+
+class DefaultAlertPresenter: AlertPresenter {
     @MainActor
-    private func showError(_ message: String) {
+    func showError(_ message: String) async {
         let alert = NSAlert()
         alert.messageText = "TextEnhancer Error"
         alert.informativeText = message
         alert.alertStyle = .warning
         alert.addButton(withTitle: "OK")
         alert.runModal()
+    }
+}
+
+// MARK: - API Provider Protocol
+
+protocol APIProviderService {
+    func enhanceText(_ text: String, with prompt: String) async throws -> String
+}
+
+// MARK: - API Provider Factory
+
+class APIProviderFactory {
+    static func createService(for provider: APIProvider, configManager: ConfigurationManager) -> APIProviderService? {
+        switch provider {
+        case .claude:
+            guard configManager.claudeApiKey != nil else { return nil }
+            return ClaudeService(configManager: configManager)
+        case .openai:
+            guard configManager.openaiApiKey != nil else { return nil }
+            return OpenAIService(configManager: configManager)
+        }
+    }
+}
+
+// MARK: - Extensions for API Provider Services
+
+extension ClaudeService: APIProviderService {}
+extension OpenAIService: APIProviderService {}
+
+// MARK: - TextProcessor
+
+class TextProcessor: ObservableObject {
+    private let configManager: ConfigurationManager
+    private let textSelectionProvider: TextSelectionProvider
+    private let textReplacer: TextReplacer
+    private let accessibilityChecker: AccessibilityChecker
+    private let alertPresenter: AlertPresenter
+    
+    init(
+        configManager: ConfigurationManager,
+        textSelectionProvider: TextSelectionProvider = DefaultTextSelectionProvider(),
+        textReplacer: TextReplacer? = nil,
+        accessibilityChecker: AccessibilityChecker = DefaultAccessibilityChecker(),
+        alertPresenter: AlertPresenter = DefaultAlertPresenter()
+    ) {
+        self.configManager = configManager
+        self.textSelectionProvider = textSelectionProvider
+        self.accessibilityChecker = accessibilityChecker
+        self.alertPresenter = alertPresenter
+        
+        // Initialize text replacer with default pasteboard manager if not provided
+        if let textReplacer = textReplacer {
+            self.textReplacer = textReplacer
+        } else {
+            self.textReplacer = DefaultTextReplacer(pasteboardManager: DefaultPasteboardManager())
+        }
+    }
+    
+    func processSelectedText(with prompt: String) async {
+        // Find the appropriate shortcut configuration
+        let shortcut = configManager.configuration.shortcuts.first { $0.prompt == prompt }
+        let provider = shortcut?.effectiveProvider ?? .claude
+        
+        await processSelectedText(with: prompt, using: provider)
+    }
+    
+    func processSelectedText(with prompt: String, using provider: APIProvider) async {
+        // Check accessibility permissions first
+        if !accessibilityChecker.isAccessibilityEnabled() {
+            await accessibilityChecker.requestAccessibilityPermissions()
+            
+            // Check again after prompting
+            guard accessibilityChecker.isAccessibilityEnabled() else {
+                await alertPresenter.showError("Accessibility permissions are required to capture and replace text. Please grant permissions in System Settings > Privacy & Security > Accessibility.")
+                return
+            }
+        }
+        
+        // Create appropriate API service
+        guard let apiService = APIProviderFactory.createService(for: provider, configManager: configManager) else {
+            await alertPresenter.showError("API provider \(provider.displayName) is not configured or enabled.")
+            return
+        }
+        
+        // Notify that processing has started
+        NotificationCenter.default.post(name: .textProcessingStarted, object: nil)
+        
+        defer {
+            // Notify that processing has finished
+            NotificationCenter.default.post(name: .textProcessingFinished, object: nil)
+        }
+        
+        do {
+            // Get selected text
+            guard let selectedText = textSelectionProvider.getSelectedText(), !selectedText.isEmpty else {
+                await alertPresenter.showError("No text selected")
+                return
+            }
+            
+            // Process with the appropriate API service
+            let enhancedText = try await apiService.enhanceText(selectedText, with: prompt)
+            
+            // Replace selected text
+            await textReplacer.replaceSelectedText(with: enhancedText)
+            
+        } catch {
+            await alertPresenter.showError("Failed to enhance text: \(error.localizedDescription)")
+        }
     }
 } 
