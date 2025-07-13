@@ -52,6 +52,12 @@ elif [[ "$1" == "--bundle" ]]; then
     echo "🎯 Running TextEnhancer as app bundle..."
     echo "Note: This will show as 'TextEnhancer' in accessibility permissions"
     open TextEnhancer.app
+elif [[ "$1" == "--test" ]]; then
+    echo "🧪 Running tests with coverage..."
+    swift test --enable-code-coverage
+    echo ""
+    echo "📊 Code coverage report:"
+    echo "Use: xcrun llvm-cov show .build/debug/TextEnhancerPackageTests.xctest/Contents/MacOS/TextEnhancerPackageTests -instr-profile .build/debug/codecov/default.profdata"
 elif [[ "$1" == "--settings" ]]; then
     echo "⚙️  Opening TextEnhancer settings..."
     if [ -d "TextEnhancer.app" ]; then
@@ -68,6 +74,7 @@ echo "🎉 Build complete!"
 echo "To run the application:"
 echo "  ./build.sh --run          # Run debug executable"
 echo "  ./build.sh --bundle       # Create and run as app bundle (recommended)"
+echo "  ./build.sh --test         # Run tests with coverage"
 echo "  ./build.sh --settings     # Open settings window directly"
 echo "  .build/debug/TextEnhancer  # Run debug executable directly"
 echo ""

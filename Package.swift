@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "TextEnhancer",
     platforms: [
-        .macOS(.v14)
+        .macOS(.v13)
     ],
     products: [
         .executable(name: "TextEnhancer", targets: ["TextEnhancer"])
@@ -17,13 +17,16 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "TextEnhancer",
-            dependencies: [
-                // No external dependencies for Phase 1
-            ],
+            dependencies: [],
             path: "Sources",
             swiftSettings: [
                 .unsafeFlags(["-parse-as-library"])
             ]
+        ),
+        .testTarget(
+            name: "TextEnhancerTests",
+            dependencies: ["TextEnhancer"],
+            path: "Tests/TextEnhancerTests"
         )
     ]
 ) 

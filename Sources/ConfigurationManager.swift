@@ -4,30 +4,32 @@ import Carbon
 class ConfigurationManager: ObservableObject {
     @Published var configuration: AppConfiguration = .default
     
+    private let localConfigFile: URL
+    private let fallbackConfigFile: URL
+    
     var claudeApiKey: String? {
         return configuration.claudeApiKey.isEmpty ? nil : configuration.claudeApiKey
     }
     
-    init() {
+    init(localConfig: URL = URL(fileURLWithPath: "config.json"), appSupportDir: URL? = nil) {
+        self.localConfigFile = localConfig
+        
+        let configDirectory: URL
+        if let appSupportDir = appSupportDir {
+            configDirectory = appSupportDir
+        } else {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            configDirectory = appSupport.appendingPathComponent("TextEnhancer")
+        }
+        
+        self.fallbackConfigFile = configDirectory.appendingPathComponent("config.json")
+        
         loadConfiguration()
     }
     
     // MARK: - Configuration Operations
     
     // MARK: - Configuration File Operations
-    
-    private var localConfigFile: URL {
-        return URL(fileURLWithPath: "config.json")
-    }
-    
-    private var configDirectory: URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return appSupport.appendingPathComponent("TextEnhancer")
-    }
-    
-    private var fallbackConfigFile: URL {
-        return configDirectory.appendingPathComponent("config.json")
-    }
     
     func saveConfiguration(_ config: AppConfiguration) {
         do {

@@ -2,13 +2,15 @@ import Foundation
 
 class ClaudeService: ObservableObject {
     private let configManager: ConfigurationManager
+    private let urlSession: URLSession
     private let apiURL = "https://api.anthropic.com/v1/messages"
     private let modelName = "claude-3-haiku-20240307"
     private let maxTokens = 1000
     private let timeout: TimeInterval = 30.0
     
-    init(configManager: ConfigurationManager) {
+    init(configManager: ConfigurationManager, urlSession: URLSession = .shared) {
         self.configManager = configManager
+        self.urlSession = urlSession
     }
     
     func enhanceText(_ text: String, with prompt: String) async throws -> String {
@@ -18,7 +20,7 @@ class ClaudeService: ObservableObject {
         
         let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey)
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ClaudeError.invalidResponse
@@ -37,7 +39,7 @@ class ClaudeService: ObservableObject {
         return content
     }
     
-    private func createRequest(text: String, prompt: String, apiKey: String) throws -> URLRequest {
+    internal func createRequest(text: String, prompt: String, apiKey: String) throws -> URLRequest {
         guard let url = URL(string: apiURL) else {
             throw ClaudeError.invalidURL
         }

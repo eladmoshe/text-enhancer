@@ -98,6 +98,7 @@ help:
 	@echo "  deps       - Resolve dependencies"
 	@echo "  update     - Update dependencies"
 	@echo "  bundle     - Create app bundle for distribution"
+	@echo "  test       - Run tests with coverage"
 	@echo "  format     - Format Swift code"
 	@echo "  lint       - Lint Swift code"
 	@echo "  check      - Check for common issues"
@@ -107,6 +108,14 @@ help:
 
 # Development shortcuts
 dev: clean deps build run
+
+# Run tests with coverage
+test:
+	@echo "Running tests with coverage..."
+	swift test --enable-code-coverage
+	@echo ""
+	@echo "Code coverage report:"
+	@echo "Use: xcrun llvm-cov show .build/debug/TextEnhancerPackageTests.xctest/Contents/MacOS/TextEnhancerPackageTests -instr-profile .build/debug/codecov/default.profdata"
 
 # Quick test build
 test-build:

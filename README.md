@@ -173,6 +173,35 @@ make bundle
 
 - **No external dependencies** - Phase 1 uses only native macOS frameworks
 
+## Testing
+
+The project includes comprehensive unit tests for the core components:
+
+- **ConfigurationManager**: Tests configuration loading, saving, and fallback behavior
+- **ClaudeService**: Tests API request creation, error handling, and response parsing
+- **TextProcessor**: Basic initialization tests (more comprehensive tests require protocol extraction)
+
+**Note**: Due to XCTest framework limitations with Swift Package Manager and Command Line Tools only (without full Xcode), the standard `swift test` command may not work. We provide alternative testing approaches:
+
+#### Option 1: Install Full Xcode (Recommended)
+```bash
+# Install Xcode from Mac App Store, then:
+swift test --enable-code-coverage
+```
+
+#### Option 2: Use Simple Test Runner
+```bash
+# Run basic tests without XCTest dependency (requires module access setup)
+# Note: This demonstrates test logic but needs proper module integration
+swift Tests/SimpleTestRunner.swift
+```
+
+#### Option 3: Use Build Script
+```bash
+./build.sh --test  # Attempts to run tests with coverage
+make test          # Alternative make target
+```
+
 ## Roadmap
 
 ### Phase 2 (Coming Soon)
