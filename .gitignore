@@ -1,0 +1,18 @@
+# Build artifacts
+.build/
+*.xcodeproj
+*.xcworkspace
+*.DS_Store
+
+# Configuration files (contains sensitive data)
+config.json
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/ 

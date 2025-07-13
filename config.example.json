@@ -1,0 +1,46 @@
+{
+  "claudeApiKey": "your-claude-api-key-here",
+  "shortcuts": [
+    {
+      "id": "improve-text",
+      "name": "Improve Text",
+      "keyCode": 18,
+      "modifiers": ["ctrl", "opt"],
+      "prompt": "Improve the writing quality and clarity of this text while maintaining its original meaning and tone."
+    },
+    {
+      "id": "make-formal",
+      "name": "Make Formal",
+      "keyCode": 19,
+      "modifiers": ["ctrl", "opt"],
+      "prompt": "Rewrite this text in a formal, professional tone suitable for business communication."
+    },
+    {
+      "id": "make-casual",
+      "name": "Make Casual",
+      "keyCode": 20,
+      "modifiers": ["ctrl", "opt"],
+      "prompt": "Rewrite this text in a casual, friendly tone suitable for informal communication."
+    },
+    {
+      "id": "summarize",
+      "name": "Summarize",
+      "keyCode": 21,
+      "modifiers": ["ctrl", "opt"],
+      "prompt": "Provide a concise summary of this text, highlighting the main points."
+    },
+    {
+      "id": "expand",
+      "name": "Expand",
+      "keyCode": 22,
+      "modifiers": ["ctrl", "opt"],
+      "prompt": "Expand this text with more details, examples, and explanations while maintaining clarity."
+    }
+  ],
+  "maxTokens": 1000,
+  "timeout": 30.0,
+  "showStatusIcon": true,
+  "enableNotifications": true,
+  "autoSave": true,
+  "logLevel": "info"
+} 
