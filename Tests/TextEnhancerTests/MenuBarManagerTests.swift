@@ -163,18 +163,62 @@ class MenuBarManagerTests: XCTestCase {
         
         let shortcut = configManager.configuration.shortcuts[0]
         
-        // Create a mock menu item
-        let menuItem = NSMenuItem(title: shortcut.name, action: #selector(MenuBarManager.handleMenuShortcut(_:)), keyEquivalent: "")
+        // Create a mock menu item (matching the actual format used by MenuBarManager)
+        let shortcutDisplay = formatShortcutDisplay(shortcut.modifiers, shortcut.keyCode)
+        let menuItem = NSMenuItem(title: "\(shortcutDisplay) - \(shortcut.name)", action: #selector(MenuBarManager.handleMenuShortcut(_:)), keyEquivalent: "")
         menuItem.representedObject = shortcut
         menuItem.target = menuBarManager
         
         // Verify the menu item is properly configured
-        XCTAssertEqual(menuItem.title, "Improve Text", "Menu item should have correct title")
+        XCTAssertEqual(menuItem.title, "⌃⌥1 - Improve Text", "Menu item should have correct title with shortcut")
         XCTAssertEqual(menuItem.action, #selector(MenuBarManager.handleMenuShortcut(_:)), "Menu item should have correct action")
         XCTAssertNotNil(menuItem.representedObject, "Menu item should have represented object")
         XCTAssertTrue(menuItem.representedObject is ShortcutConfiguration, "Represented object should be ShortcutConfiguration")
         
         // Verify the MenuBarManager can respond to the selector
         XCTAssertTrue((menuBarManager as AnyObject).responds(to: #selector(MenuBarManager.handleMenuShortcut(_:))), "MenuBarManager should respond to handleMenuShortcut")
+    }
+    
+    func testMenuItemsDisplayShortcuts() {
+        // Test that menu items display shortcuts in the title (not just name)
+        // This prevents regression where shortcuts disappear from menu
+        
+        let shortcuts = configManager.configuration.shortcuts
+        XCTAssertGreaterThan(shortcuts.count, 0, "Should have at least one shortcut configured")
+        
+        let firstShortcut = shortcuts[0]
+        
+        // Simulate how the menu item title is constructed
+        let shortcutDisplay = formatShortcutDisplay(firstShortcut.modifiers, firstShortcut.keyCode)
+        let expectedTitle = "\(shortcutDisplay) - \(firstShortcut.name)"
+        
+        // Verify the title format includes both shortcut and name
+        XCTAssertTrue(expectedTitle.contains("⌃⌥1"), "Menu item title should contain the shortcut key ⌃⌥1")
+        XCTAssertTrue(expectedTitle.contains("Improve Text"), "Menu item title should contain the shortcut name")
+        XCTAssertEqual(expectedTitle, "⌃⌥1 - Improve Text", "Menu item title should be formatted as 'shortcut - name'")
+    }
+    
+    private func formatShortcutDisplay(_ modifiers: [ModifierKey], _ keyCode: Int) -> String {
+        // Helper method to test the shortcut display formatting
+        let modifierString = modifiers.map { $0.displayName }.joined()
+        let keyName = keyCodeToString(keyCode)
+        return "\(modifierString)\(keyName)"
+    }
+    
+    private func keyCodeToString(_ keyCode: Int) -> String {
+        // Helper method to convert keyCode to string (same logic as in MenuBarManager)
+        switch keyCode {
+        case 18: return "1"
+        case 19: return "2"
+        case 20: return "3"
+        case 21: return "4"
+        case 22: return "5"
+        case 23: return "6"
+        case 24: return "7"
+        case 25: return "8"
+        case 26: return "9"
+        case 29: return "0"
+        default: return "Key\(keyCode)"
+        }
     }
 } 

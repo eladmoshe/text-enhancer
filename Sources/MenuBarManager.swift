@@ -58,10 +58,10 @@ class MenuBarManager: ObservableObject {
         } else {
             for shortcut in shortcuts {
                 let shortcutDisplay = formatShortcutDisplay(shortcut.modifiers, shortcut.keyCode)
-                let shortcutMenuItem = NSMenuItem(title: "\(shortcut.name)", action: #selector(handleMenuShortcut(_:)), keyEquivalent: "")
+                let shortcutMenuItem = NSMenuItem(title: "\(shortcutDisplay) - \(shortcut.name)", action: #selector(handleMenuShortcut(_:)), keyEquivalent: "")
                 shortcutMenuItem.target = self
                 shortcutMenuItem.representedObject = shortcut
-                shortcutMenuItem.toolTip = "Shortcut: \(shortcutDisplay)"
+                shortcutMenuItem.toolTip = "Click to \(shortcut.name.lowercased())"
                 menu.addItem(shortcutMenuItem)
             }
         }
