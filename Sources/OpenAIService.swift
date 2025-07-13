@@ -38,7 +38,13 @@ class OpenAIService: ObservableObject {
             throw OpenAIError.noContent
         }
         
-        return content
+        // Extract JSON from the response content
+        do {
+            let enhancementResponse = try JSONExtractor.extractJSONPayload(from: content)
+            return enhancementResponse.enhancedText
+        } catch {
+            throw OpenAIError.invalidJSONResponse(error)
+        }
     }
     
     internal func createRequest(text: String, prompt: String, apiKey: String) throws -> URLRequest {
@@ -52,7 +58,18 @@ class OpenAIService: ObservableObject {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = timeout
         
-        let fullPrompt = "\(prompt)\n\nText to enhance:\n\(text)"
+        let fullPrompt = """
+        \(prompt)
+        
+        Text to enhance:
+        \(text)
+        
+        Respond ONLY with valid JSON exactly matching this schema:
+        {
+            "enhancedText": "<improved text>"
+        }
+        No additional keys, comments, markdown, or code fences.
+        """
         
         let requestBody = OpenAIRequest(
             model: defaultModel,
@@ -107,6 +124,7 @@ enum OpenAIError: Error {
     case invalidResponse
     case apiError(Int, Data)
     case noContent
+    case invalidJSONResponse(Error)
 }
 
 extension OpenAIError: LocalizedError {
@@ -125,6 +143,8 @@ extension OpenAIError: LocalizedError {
             return "OpenAI API error with status code: \(statusCode)"
         case .noContent:
             return "No content received from OpenAI API"
+        case .invalidJSONResponse(let error):
+            return "Invalid JSON response from OpenAI: \(error.localizedDescription)"
         }
     }
 } 

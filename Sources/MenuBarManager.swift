@@ -200,6 +200,13 @@ class MenuBarManager: ObservableObject {
     }
     
     private func requestNotificationPermissions() {
+        // Check if we're running in a proper app bundle and not from swift run
+        guard Bundle.main.bundleIdentifier != nil,
+              !Bundle.main.bundlePath.contains("/.build/") else {
+            print("ℹ️  Skipping notification permissions request - not running in app bundle")
+            return
+        }
+        
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error = error {
                 print("⚠️  Notification permission error: \(error)")
@@ -213,6 +220,13 @@ class MenuBarManager: ObservableObject {
     
     private func showNotification(title: String, message: String, isStarting: Bool) {
         guard configManager.configuration.enableNotifications else { return }
+        
+        // Check if we're running in a proper app bundle and not from swift run
+        guard Bundle.main.bundleIdentifier != nil,
+              !Bundle.main.bundlePath.contains("/.build/") else {
+            print("ℹ️  Skipping notification - not running in app bundle")
+            return
+        }
         
         let content = UNMutableNotificationContent()
         content.title = title

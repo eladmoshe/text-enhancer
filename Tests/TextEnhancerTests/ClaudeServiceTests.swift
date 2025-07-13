@@ -80,6 +80,29 @@ final class ClaudeServiceTests: XCTestCase {
         XCTAssertEqual(result, "Enhanced text")
     }
     
+    func test_enhanceText_successWithPrefix() async throws {
+        // Given: Valid API key and successful response with prefix
+        configManager = createConfigManager(with: "test-api-key")
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
+        
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            
+            return (response, MockURLProtocol.mockClaudeSuccessWithPrefix(text: "Enhanced text with prefix"))
+        }
+        
+        // When: Enhance text
+        let result = try await claudeService.enhanceText("Hello world", with: "Test prompt")
+        
+        // Then: Should extract JSON and return enhanced text
+        XCTAssertEqual(result, "Enhanced text with prefix")
+    }
+    
     func test_enhanceText_missingApiKeyThrows() async {
         // Given: Empty API key
         configManager = createConfigManager(with: "")

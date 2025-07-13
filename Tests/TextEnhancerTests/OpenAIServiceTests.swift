@@ -57,7 +57,7 @@ final class OpenAIServiceTests: XCTestCase {
                 {
                     "message": {
                         "role": "assistant",
-                        "content": "Enhanced text content"
+                        "content": "{\\"enhancedText\\": \\"Enhanced text content\\"}"
                     },
                     "finish_reason": "stop"
                 }

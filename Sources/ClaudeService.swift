@@ -36,7 +36,13 @@ class ClaudeService: ObservableObject {
             throw ClaudeError.noContent
         }
         
-        return content
+        // Extract JSON from the response content
+        do {
+            let enhancementResponse = try JSONExtractor.extractJSONPayload(from: content)
+            return enhancementResponse.enhancedText
+        } catch {
+            throw ClaudeError.invalidJSONResponse(error)
+        }
     }
     
     internal func createRequest(text: String, prompt: String, apiKey: String) throws -> URLRequest {
@@ -51,7 +57,18 @@ class ClaudeService: ObservableObject {
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         request.timeoutInterval = timeout
         
-        let fullPrompt = "\(prompt)\n\nText to enhance:\n\(text)"
+        let fullPrompt = """
+        \(prompt)
+        
+        Text to enhance:
+        \(text)
+        
+        Respond ONLY with valid JSON exactly matching this schema:
+        {
+            "enhancedText": "<improved text>"
+        }
+        No additional keys, comments, markdown, or code fences.
+        """
         
         let requestBody = ClaudeRequest(
             model: modelName,
@@ -107,6 +124,7 @@ enum ClaudeError: LocalizedError {
     case invalidResponse
     case apiError(Int, Data)
     case noContent
+    case invalidJSONResponse(Error)
     
     var errorDescription: String? {
         switch self {
@@ -123,6 +141,8 @@ enum ClaudeError: LocalizedError {
             return "Claude API error (\(statusCode))"
         case .noContent:
             return "No content received from Claude API"
+        case .invalidJSONResponse(let error):
+            return "Invalid JSON response from Claude: \(error.localizedDescription)"
         }
     }
 } 

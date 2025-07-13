@@ -42,9 +42,31 @@ class MockURLProtocol: URLProtocol {
     
     // Helper method to create Claude API success response
     static func mockClaudeSuccess(text: String) -> Data {
+        let enhancedTextJSON = "{\"enhancedText\": \"\(text)\"}"
+        
         let response = """
         {
-            "content": [{"type": "text", "text": "\(text)"}],
+            "content": [{"type": "text", "text": "\(enhancedTextJSON.replacingOccurrences(of: "\"", with: "\\\""))"}],
+            "model": "claude-3-haiku-20240307",
+            "role": "assistant",
+            "stop_reason": "end_turn",
+            "usage": {"input_tokens": 10, "output_tokens": 5}
+        }
+        """
+        return response.data(using: .utf8)!
+    }
+    
+    // Helper method to create Claude API success response with prefix
+    static func mockClaudeSuccessWithPrefix(text: String) -> Data {
+        let responseWithPrefix = "Sure, here's the improved text:\n\n{\"enhancedText\": \"\(text)\"}"
+        
+        let escapedResponse = responseWithPrefix
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+        
+        let response = """
+        {
+            "content": [{"type": "text", "text": "\(escapedResponse)"}],
             "model": "claude-3-haiku-20240307",
             "role": "assistant",
             "stop_reason": "end_turn",
