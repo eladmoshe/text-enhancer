@@ -208,13 +208,12 @@ class TextProcessor: ObservableObject {
         let processingTask = Task {
             // Check accessibility permissions first
             if !accessibilityChecker.isAccessibilityEnabled() {
+                print("🔐 TextProcessor: Accessibility permissions not granted, requesting...")
                 await accessibilityChecker.requestAccessibilityPermissions()
                 
-                // Check again after prompting
-                guard accessibilityChecker.isAccessibilityEnabled() else {
-                    await alertPresenter.showError("Accessibility permissions are required to capture and replace text. Please grant permissions in System Settings > Privacy & Security > Accessibility.")
-                    return
-                }
+                // Give user friendly message and don't proceed this time
+                await alertPresenter.showError("Accessibility permissions are required to capture and replace text.\n\n1. Open System Settings > Privacy & Security > Accessibility\n2. Add TextEnhancer to the list\n3. Try the shortcut again\n\nTip: You can also click on the menu bar icon to access permission settings.")
+                return
             }
             
             // Create appropriate API service

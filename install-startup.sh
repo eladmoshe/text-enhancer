@@ -14,7 +14,27 @@ if [ ! -f "Package.swift" ]; then
     exit 1
 fi
 
-# Step 1: Build the app bundle
+# Step 1: Stop any running instances
+echo "🛑 Stopping any running TextEnhancer instances..."
+
+# Kill running TextEnhancer processes
+if pgrep -f "TextEnhancer" > /dev/null; then
+    echo "Found running TextEnhancer instances, terminating..."
+    pkill -f "TextEnhancer"
+    sleep 2
+    
+    # Force kill if still running
+    if pgrep -f "TextEnhancer" > /dev/null; then
+        echo "Force terminating remaining instances..."
+        pkill -9 -f "TextEnhancer"
+        sleep 1
+    fi
+    echo "✅ All TextEnhancer instances stopped"
+else
+    echo "✅ No running TextEnhancer instances found"
+fi
+
+# Step 2: Build the app bundle
 echo "🔨 Building TextEnhancer app bundle..."
 make bundle
 
@@ -25,7 +45,7 @@ fi
 
 echo "✅ App bundle created successfully"
 
-# Step 2: Install to Applications folder
+# Step 3: Install to Applications folder
 echo "📦 Installing to Applications folder..."
 INSTALL_PATH="/Applications/TextEnhancer.app"
 
@@ -39,7 +59,7 @@ fi
 cp -R TextEnhancer.app "$INSTALL_PATH"
 echo "✅ Installed to $INSTALL_PATH"
 
-# Step 3: Set up for startup using osascript (AppleScript)
+# Step 4: Set up for startup using osascript (AppleScript)
 echo "🌅 Setting up for startup..."
 
 # Create AppleScript to add to login items

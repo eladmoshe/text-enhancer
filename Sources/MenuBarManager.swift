@@ -10,6 +10,8 @@ class MenuBarManager: ObservableObject {
     @Published var isProcessing = false
     private var animationTimer: Timer?
     private var animationPhase = 0
+    private var permissionCheckTimer: Timer?
+    private var lastAccessibilityStatus = false
     
     init(shortcutManager: ShortcutManager, configManager: ConfigurationManager, textProcessor: TextProcessor) {
         self.shortcutManager = shortcutManager
@@ -35,6 +37,14 @@ class MenuBarManager: ObservableObject {
         if configManager.configuration.enableNotifications {
             requestNotificationPermissions()
         }
+        
+        // Set initial accessibility status and log it
+        lastAccessibilityStatus = AXIsProcessTrusted()
+        print("🔍 Initial accessibility status: \(lastAccessibilityStatus)")
+        print("📋 Bundle ID: \(Bundle.main.bundleIdentifier ?? "nil")")
+        
+        // Start periodic permission checking
+        startPermissionMonitoring()
     }
     
     func setupMenu(for statusItem: NSStatusItem) {
@@ -68,12 +78,30 @@ class MenuBarManager: ObservableObject {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Accessibility permission status
+        let accessibilityStatus = AXIsProcessTrusted()
+        let accessibilityItem = NSMenuItem(
+            title: accessibilityStatus ? "✅ Accessibility: Enabled" : "⚠️ Accessibility: Disabled (Click to enable)",
+            action: accessibilityStatus ? #selector(debugPermissionStatus) : #selector(requestAccessibilityPermissions),
+            keyEquivalent: ""
+        )
+        accessibilityItem.target = self
+        accessibilityItem.isEnabled = true
+        menu.addItem(accessibilityItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Configuration info
         let configItem = NSMenuItem(title: "Edit config.json to configure", action: nil, keyEquivalent: "")
         configItem.isEnabled = false
         menu.addItem(configItem)
 
         menu.addItem(NSMenuItem.separator())
+
+        // Force restart option
+        let restartItem = NSMenuItem(title: "🔄 Force Restart App", action: #selector(forceRestartApp), keyEquivalent: "r")
+        restartItem.target = self
+        menu.addItem(restartItem)
 
         // Quit
         let quitItem = NSMenuItem(title: "Quit TextEnhancer", action: #selector(quitApp), keyEquivalent: "q")
@@ -82,6 +110,36 @@ class MenuBarManager: ObservableObject {
 
         statusItem.menu = menu
     }
+    
+    private func refreshMenu() {
+        guard let statusItem = self.statusItem else { return }
+        setupMenu(for: statusItem)
+    }
+    
+    private func startPermissionMonitoring() {
+        // Check permissions every 2 seconds to detect changes
+        permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.checkPermissionChanges()
+        }
+    }
+    
+    private func checkPermissionChanges() {
+        let currentStatus = AXIsProcessTrusted()
+        
+        // Always log current status for debugging
+        if currentStatus != lastAccessibilityStatus {
+            print("🔄 Accessibility permission status changed: \(lastAccessibilityStatus) -> \(currentStatus)")
+            print("📋 Bundle ID: \(Bundle.main.bundleIdentifier ?? "nil")")
+            print("📋 Bundle path: \(Bundle.main.bundlePath)")
+            lastAccessibilityStatus = currentStatus
+            
+            DispatchQueue.main.async {
+                self.updateStatusIcon()
+                self.refreshMenu()
+            }
+        }
+    }
+    
     
     private func formatShortcutDisplay(_ modifiers: [ModifierKey], _ keyCode: Int) -> String {
         let modifierString = modifiers.map { $0.displayName }.joined()
@@ -110,6 +168,122 @@ class MenuBarManager: ObservableObject {
         
         Task {
             await textProcessor.processSelectedText(with: shortcut.prompt)
+        }
+    }
+    
+    @objc private func requestAccessibilityPermissions() {
+        print("🔐 MenuBarManager: Permission request triggered from menu")
+        
+        // Direct permission check and request
+        let currentStatus = AXIsProcessTrusted()
+        print("🔐 MenuBarManager: Current accessibility status: \(currentStatus)")
+        
+        if !currentStatus {
+            print("🔐 MenuBarManager: Requesting accessibility permissions...")
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+            let newStatus = AXIsProcessTrustedWithOptions(options as CFDictionary)
+            print("🔐 MenuBarManager: Permission request result: \(newStatus)")
+            
+            // Also try through app delegate as backup
+            if let appDelegate = NSApp.delegate as? AppDelegate {
+                appDelegate.promptForAccessibilityPermissions()
+            }
+        } else {
+            print("🔐 MenuBarManager: Permissions already granted")
+        }
+        
+        // Update the menu after requesting permissions
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.refreshMenu()
+        }
+    }
+    
+    @objc private func debugPermissionStatus() {
+        let currentStatus = AXIsProcessTrusted()
+        print("🔍 COMPREHENSIVE Permission Diagnostic:")
+        print("   AXIsProcessTrusted(): \(currentStatus)")
+        print("   Bundle ID: \(Bundle.main.bundleIdentifier ?? "nil")")
+        print("   Bundle path: \(Bundle.main.bundlePath)")
+        print("   Executable path: \(Bundle.main.executablePath ?? "nil")")
+        print("   Last known status: \(lastAccessibilityStatus)")
+        print("   Process ID: \(ProcessInfo.processInfo.processIdentifier)")
+        print("   Process name: \(ProcessInfo.processInfo.processName)")
+        print("   Is running from Applications?: \(Bundle.main.bundlePath.hasPrefix("/Applications/"))")
+        
+        // Check if we're the installed version
+        let installedPath = "/Applications/TextEnhancer.app"
+        let isInstalledVersion = Bundle.main.bundlePath == installedPath
+        print("   Is installed version?: \(isInstalledVersion)")
+        
+        if !isInstalledVersion {
+            print("   ⚠️  WARNING: Not running from Applications folder!")
+            print("   Expected: \(installedPath)")
+            print("   Actual: \(Bundle.main.bundlePath)")
+        }
+        
+        // Test actual accessibility functionality
+        testAccessibilityCapability()
+        
+        // Force refresh the status
+        lastAccessibilityStatus = !currentStatus // Force change detection
+        checkPermissionChanges()
+    }
+    
+    private func testAccessibilityCapability() {
+        print("🧪 Testing actual accessibility capability...")
+        
+        // Try to access system-wide accessibility
+        let systemWideElement = AXUIElementCreateSystemWide()
+        var focusedElement: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
+        
+        print("   AXUIElementCopyAttributeValue result: \(result.rawValue)")
+        print("   Success means: \(result == .success)")
+        
+        if result != .success {
+            print("   ❌ Cannot access accessibility - this explains the permission issue")
+        } else {
+            print("   ✅ Can access accessibility - permissions should be working")
+        }
+    }
+    
+    @objc private func forceRestartApp() {
+        print("🔄 Force restarting TextEnhancer...")
+        
+        // Get the app bundle path
+        let appPath = Bundle.main.bundlePath
+        print("   App path: \(appPath)")
+        
+        // Create a restart script
+        let restartScript = """
+        #!/bin/bash
+        sleep 1
+        open "\(appPath)"
+        """
+        
+        // Write script to temporary file
+        let tempScript = "/tmp/restart_textenhancer.sh"
+        do {
+            try restartScript.write(toFile: tempScript, atomically: true, encoding: .utf8)
+            
+            // Make it executable and run it
+            let process = Process()
+            process.launchPath = "/bin/chmod"
+            process.arguments = ["+x", tempScript]
+            process.launch()
+            process.waitUntilExit()
+            
+            // Launch the restart script
+            let restartProcess = Process()
+            restartProcess.launchPath = "/bin/bash"
+            restartProcess.arguments = [tempScript]
+            restartProcess.launch()
+            
+            // Quit this instance
+            NSApp.terminate(nil)
+            
+        } catch {
+            print("❌ Failed to create restart script: \(error)")
         }
     }
     
@@ -188,6 +362,8 @@ class MenuBarManager: ObservableObject {
         button.image = nil
         button.title = ""
         
+        let accessibilityEnabled = AXIsProcessTrusted()
+        
         // Use appropriate SF Symbols with fallbacks
         if isProcessing {
             // This will be overridden by animation, but set initial state
@@ -197,6 +373,15 @@ class MenuBarManager: ObservableObject {
                 button.image?.isTemplate = true
             } else {
                 button.title = "⏳"
+            }
+        } else if !accessibilityEnabled {
+            // Show warning icon when accessibility permissions are not granted
+            if let image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: "Accessibility permissions required") {
+                button.image = image
+                button.image?.size = NSSize(width: 16, height: 16)
+                button.image?.isTemplate = true
+            } else {
+                button.title = "⚠️"
             }
         } else {
             if let image = NSImage(systemSymbolName: "wand.and.stars", accessibilityDescription: "Text Enhancer") {
@@ -264,6 +449,7 @@ class MenuBarManager: ObservableObject {
     
     deinit {
         animationTimer?.invalidate()
+        permissionCheckTimer?.invalidate()
         NotificationCenter.default.removeObserver(self)
     }
 }

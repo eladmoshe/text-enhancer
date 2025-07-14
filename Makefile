@@ -15,23 +15,40 @@ release:
 	@echo "Building TextEnhancer (Release)..."
 	swift build -c release
 
+# Stop any running instances
+stop:
+	@echo "Stopping any running TextEnhancer instances..."
+	@if pgrep -f "TextEnhancer" > /dev/null; then \
+		echo "Found running TextEnhancer instances, terminating..."; \
+		pkill -f "TextEnhancer"; \
+		sleep 2; \
+		if pgrep -f "TextEnhancer" > /dev/null; then \
+			echo "Force terminating remaining instances..."; \
+			pkill -9 -f "TextEnhancer"; \
+			sleep 1; \
+		fi; \
+		echo "✅ All TextEnhancer instances stopped"; \
+	else \
+		echo "✅ No running TextEnhancer instances found"; \
+	fi
+
 # Run the application
-run: build
+run: build stop
 	@echo "Running TextEnhancer..."
 	.build/debug/TextEnhancer
 
 # Run the release version
-run-release: release
+run-release: release stop
 	@echo "Running TextEnhancer (Release)..."
 	.build/release/TextEnhancer
 
 # Run as proper app bundle
-run-bundle: bundle
+run-bundle: bundle stop
 	@echo "Running TextEnhancer as app bundle..."
 	open TextEnhancer.app
 
 # Open settings directly
-settings: bundle
+settings: bundle stop
 	@echo "Opening TextEnhancer settings..."
 	open TextEnhancer.app --args --settings
 
@@ -102,6 +119,7 @@ help:
 	@echo "  format     - Format Swift code"
 	@echo "  lint       - Lint Swift code"
 	@echo "  check      - Check for common issues"
+	@echo "  stop       - Stop any running TextEnhancer instances"
 	@echo "  help       - Show this help message"
 	@echo ""
 	@echo "Usage: make [target]"

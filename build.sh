@@ -38,14 +38,36 @@ else
     exit 1
 fi
 
+# Function to stop existing instances
+stop_existing_instances() {
+    echo "🛑 Checking for running TextEnhancer instances..."
+    if pgrep -f "TextEnhancer" > /dev/null; then
+        echo "Found running TextEnhancer instances, terminating..."
+        pkill -f "TextEnhancer"
+        sleep 2
+        
+        # Force kill if still running
+        if pgrep -f "TextEnhancer" > /dev/null; then
+            echo "Force terminating remaining instances..."
+            pkill -9 -f "TextEnhancer"
+            sleep 1
+        fi
+        echo "✅ All TextEnhancer instances stopped"
+    else
+        echo "✅ No running TextEnhancer instances found"
+    fi
+}
+
 # Check if --run flag is provided
 if [[ "$1" == "--run" ]]; then
+    stop_existing_instances
     echo "🎯 Running TextEnhancer..."
     echo "Note: You'll need to grant accessibility permissions when prompted"
     echo "Press Ctrl+C to stop the application"
     echo ""
     .build/debug/TextEnhancer
 elif [[ "$1" == "--bundle" ]]; then
+    stop_existing_instances
     echo "📦 Creating app bundle..."
     make bundle
     echo ""
