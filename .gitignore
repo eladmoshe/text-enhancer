@@ -1,5 +1,6 @@
 # Build artifacts
 .build/
+TextEnhancer.app/
 *.xcodeproj
 *.xcworkspace
 *.DS_Store
