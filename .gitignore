@@ -168,3 +168,4 @@ test_output/
 *.backup
 *.bak
 *~ .swiftpm/
+.swiftpm/
