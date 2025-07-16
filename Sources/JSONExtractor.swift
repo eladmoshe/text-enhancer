@@ -154,7 +154,7 @@ class JSONExtractor {
         while currentIndex < response.endIndex {
             if response[currentIndex] == "{" {
                 var braceCount = 0
-                var jsonStart = currentIndex
+                let jsonStart = currentIndex
                 var jsonEnd = currentIndex
                 
                 // Find the matching closing brace for this opening brace
