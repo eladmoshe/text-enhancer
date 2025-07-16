@@ -1,40 +1,54 @@
 {
-  "claudeApiKey": "your-claude-api-key-here",
   "shortcuts": [
     {
       "id": "improve-text",
       "name": "Improve Text",
       "keyCode": 18,
       "modifiers": ["ctrl", "opt"],
-      "prompt": "Improve the writing quality and clarity of this text while maintaining its original meaning and tone."
-    },
-    {
-      "id": "make-formal",
-      "name": "Make Formal",
-      "keyCode": 19,
-      "modifiers": ["ctrl", "opt"],
-      "prompt": "Rewrite this text in a formal, professional tone suitable for business communication."
-    },
-    {
-      "id": "make-casual",
-      "name": "Make Casual",
-      "keyCode": 20,
-      "modifiers": ["ctrl", "opt"],
-      "prompt": "Rewrite this text in a casual, friendly tone suitable for informal communication."
+      "prompt": "Improve the writing quality and clarity of this text while maintaining its original meaning and tone.",
+      "provider": "claude"
     },
     {
       "id": "summarize",
       "name": "Summarize",
       "keyCode": 21,
       "modifiers": ["ctrl", "opt"],
-      "prompt": "Provide a concise summary of this text, highlighting the main points."
+      "prompt": "Provide a concise summary of this text, highlighting the main points.",
+      "provider": "openai"
     },
     {
       "id": "expand",
       "name": "Expand",
       "keyCode": 22,
       "modifiers": ["ctrl", "opt"],
-      "prompt": "Expand this text with more details, examples, and explanations while maintaining clarity."
+      "prompt": "Expand this text with more details, examples, and explanations while maintaining clarity.",
+      "provider": "claude"
+    },
+    {
+      "id": "describe-screen",
+      "name": "Describe Screen",
+      "keyCode": 23,
+      "modifiers": ["ctrl", "opt"],
+      "prompt": "Describe what you see in this screenshot. Explain what is happening on the screen, what applications are open, what content is visible, and any notable elements or activities.",
+      "provider": "claude",
+      "includeScreenshot": true
+    },
+    {
+      "id": "analyze-screen-openai",
+      "name": "Analyze Screen (OpenAI)",
+      "keyCode": 24,
+      "modifiers": ["ctrl", "opt"],
+      "prompt": "Analyze this screenshot and provide detailed insights about what you see. Focus on technical aspects, UI elements, and actionable observations.",
+      "provider": "openai",
+      "includeScreenshot": true
+    },
+    {
+      "id": "fix-code",
+      "name": "Fix Code",
+      "keyCode": 25,
+      "modifiers": ["ctrl", "opt"],
+      "prompt": "Review this code and fix any bugs, improve performance, or suggest better practices. Explain what you changed and why.",
+      "provider": "claude"
     }
   ],
   "maxTokens": 1000,
@@ -42,5 +56,17 @@
   "showStatusIcon": true,
   "enableNotifications": true,
   "autoSave": true,
-  "logLevel": "info"
-} 
+  "logLevel": "info",
+  "apiProviders": {
+    "claude": {
+      "apiKey": "your-claude-api-key-here",
+      "model": "claude-3-haiku-20240307",
+      "enabled": true
+    },
+    "openai": {
+      "apiKey": "your-openai-api-key-here",
+      "model": "gpt-4-turbo-preview",
+      "enabled": true
+    }
+  }
+}
