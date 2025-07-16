@@ -116,7 +116,6 @@ bundle: release check-sign
 	mkdir -p $(BUNDLE_NAME)/Contents/{MacOS,Resources}
 	cp .build/release/TextEnhancer $(BUNDLE_NAME)/Contents/MacOS/
 	cp Info.plist $(BUNDLE_NAME)/Contents/Info.plist
-	cp TextEnhancer.entitlements $(BUNDLE_NAME)/Contents/Resources/
 	@echo "✅ Unsigned app bundle created: $(BUNDLE_NAME)"
 	@if [ -z "$(SIGN_ID)" ]; then \
 		echo "⚠️  Bundle is unsigned - accessibility permissions will reset on rebuild"; \
@@ -136,7 +135,7 @@ bundle-signed: release
 	mkdir -p $(BUNDLE_NAME)/Contents/{MacOS,Resources}
 	cp .build/release/TextEnhancer $(BUNDLE_NAME)/Contents/MacOS/
 	cp Info.plist $(BUNDLE_NAME)/Contents/Info.plist
-	cp TextEnhancer.entitlements $(BUNDLE_NAME)/Contents/Resources/
+	echo "APPL????" > $(BUNDLE_NAME)/Contents/PkgInfo
 	@echo "🔏 Signing app bundle..."
 	codesign --force --deep \
 		--entitlements TextEnhancer.entitlements \
@@ -145,7 +144,7 @@ bundle-signed: release
 	@echo "🎯 Accessibility permissions will now persist across rebuilds!"
 
 # Install app bundle to Applications folder
-install: bundle
+install: bundle-signed
 	@echo "Installing TextEnhancer to $(INSTALL_PATH)..."
 	@mkdir -p "$$(dirname "$(INSTALL_PATH)")"
 	@if [ -d "$(INSTALL_PATH)" ]; then \
@@ -243,7 +242,7 @@ help:
 	@echo "  settings      - Open settings window directly"
 	@echo ""
 	@echo "📦 Install targets:"
-	@echo "  install       - Install unsigned bundle to ~/Applications"
+	@echo "  install       - Install signed bundle to ~/Applications"
 	@echo "  install-signed- Install signed bundle to ~/Applications"
 	@echo "  install-location - Show install status and location"
 	@echo ""

@@ -94,15 +94,14 @@ elif [[ "$1" == "--bundle" ]]; then
     rm -rf ~/Applications/TextEnhancer.app 2>/dev/null || true
     
     check_signing_setup
-    echo "📦 Creating unsigned app bundle..."
-    make bundle
+    echo "📦 Creating signed app bundle..."
+    make bundle-signed
     echo ""
     echo "📍 Installing to ~/Applications/TextEnhancer.app..."
     make install
     echo ""
-    echo "🎯 Running TextEnhancer as unsigned app bundle..."
-    echo "⚠️  Note: Accessibility permissions will reset on rebuild"
-    echo "💡 Use --bundle-signed for persistent permissions"
+    echo "🎯 Running TextEnhancer as signed app bundle..."
+    echo "✅ Accessibility permissions will persist across rebuilds!"
     open ~/Applications/TextEnhancer.app
 elif [[ "$1" == "--bundle-signed" ]]; then
     stop_existing_instances
@@ -194,7 +193,7 @@ if [[ "$1" != "--help" ]] && [[ "$1" != "-h" ]] && [[ "$1" != "--status" ]]; the
     echo ""
     echo "📖 Quick reference:"
     echo "  ./build.sh --run             # Development: Debug binary (no bundle, permissions reset)"
-    echo "  ./build.sh --bundle          # Production: Unsigned bundle (permissions reset on rebuild)"
+    echo "  ./build.sh --bundle          # Production: Signed bundle (persistent permissions)"
     echo "  ./build.sh --bundle-signed   # Production: Signed bundle (persistent permissions)"
     echo "  ./build.sh --status          # Check installation and signing status"
     echo "  ./build.sh --help            # Full help"
