@@ -121,6 +121,13 @@ bundle: release check-sign
 		echo "⚠️  Bundle is unsigned - accessibility permissions will reset on rebuild"; \
 		echo "💡 Use 'make bundle-signed' for persistent permissions"; \
 	fi
+	# If a provisioning profile is provided, embed it for Apple Development certificates
+	@if [ -n "$(PROVISION_PROFILE)" ] && [ -f "$(PROVISION_PROFILE)" ]; then \
+		  echo "📄 Embedding provisioning profile: $(PROVISION_PROFILE)"; \
+		  cp "$(PROVISION_PROFILE)" $(BUNDLE_NAME)/Contents/embedded.provisionprofile; \
+	else \
+		  echo "ℹ️  No provisioning profile embedded (set PROVISION_PROFILE=/path/to/profile.provisionprofile)"; \
+	fi
 
 # Create app bundle (signed - permissions will persist across rebuilds)
 bundle-signed: release
