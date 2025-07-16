@@ -48,6 +48,7 @@ class MenuBarManager: ObservableObject {
     }
     
     func setupMenu(for statusItem: NSStatusItem) {
+        NSLog("🔧 MenuBarManager: Setting up menu...")
         self.statusItem = statusItem
         
         let menu = NSMenu()
@@ -56,6 +57,7 @@ class MenuBarManager: ObservableObject {
         let statusMenuItem = NSMenuItem(title: "TextEnhancer", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
         menu.addItem(statusMenuItem)
+        NSLog("🔧 MenuBarManager: Added status item")
 
         menu.addItem(NSMenuItem.separator())
 
@@ -79,6 +81,7 @@ class MenuBarManager: ObservableObject {
         menu.addItem(NSMenuItem.separator())
 
         // Accessibility permission status
+        NSLog("🔧 MenuBarManager: Adding accessibility item...")
         let accessibilityStatus = AXIsProcessTrusted()
         let accessibilityItem = NSMenuItem(
             title: accessibilityStatus ? "✅ Accessibility: Enabled" : "⚠️ Accessibility: Disabled (Click to enable)",
@@ -88,6 +91,26 @@ class MenuBarManager: ObservableObject {
         accessibilityItem.target = self
         accessibilityItem.isEnabled = true
         menu.addItem(accessibilityItem)
+        NSLog("🔧 MenuBarManager: Added accessibility item: '\(accessibilityItem.title)'")
+
+        // Screen recording permission status - simplified approach
+        NSLog("🔧 MenuBarManager: Adding screen recording item...")
+        let screenRecordingStatus: Bool
+        if #available(macOS 10.15, *) {
+            screenRecordingStatus = CGPreflightScreenCaptureAccess()
+        } else {
+            screenRecordingStatus = true // Always enabled on older macOS
+        }
+        
+        let screenRecordingItem = NSMenuItem(
+            title: screenRecordingStatus ? "✅ Screen Recording: Enabled" : "⚠️ Screen Recording: Disabled (Click to enable)",
+            action: screenRecordingStatus ? #selector(debugPermissionStatus) : #selector(requestScreenRecordingPermissions),
+            keyEquivalent: ""
+        )
+        screenRecordingItem.target = self
+        screenRecordingItem.isEnabled = true
+        menu.addItem(screenRecordingItem)
+        NSLog("🔧 MenuBarManager: Added screen recording item: '\(screenRecordingItem.title)'")
 
         menu.addItem(NSMenuItem.separator())
 
@@ -109,6 +132,8 @@ class MenuBarManager: ObservableObject {
         menu.addItem(quitItem)
 
         statusItem.menu = menu
+        NSLog("🔧 MenuBarManager: Menu setup complete! Total items: \(menu.items.count)")
+        NSLog("🔧 MenuBarManager: Menu items: \(menu.items.map { $0.title })")
     }
     
     private func refreshMenu() {
@@ -198,10 +223,43 @@ class MenuBarManager: ObservableObject {
         }
     }
     
+    @objc private func requestScreenRecordingPermissions() {
+        print("🔐 MenuBarManager: Screen recording permission request triggered from menu")
+        
+        // Check current screen recording permission status
+        let currentStatus = CGPreflightScreenCaptureAccess()
+        print("🔐 MenuBarManager: Current screen recording status: \(currentStatus)")
+        
+        if !currentStatus {
+            print("🔐 MenuBarManager: Requesting screen recording permissions...")
+            
+            // Request screen recording permissions - this will prompt the user
+            let result = CGRequestScreenCaptureAccess()
+            print("🔐 MenuBarManager: Screen recording permission request result: \(result)")
+            
+            if !result {
+                // Open System Preferences to Screen Recording if request failed
+                print("🔐 MenuBarManager: Opening System Preferences for manual permission grant")
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+        } else {
+            print("🔐 MenuBarManager: Screen recording permissions already granted")
+        }
+        
+        // Update the menu after requesting permissions
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.refreshMenu()
+        }
+    }
+    
     @objc private func debugPermissionStatus() {
-        let currentStatus = AXIsProcessTrusted()
+        let accessibilityStatus = AXIsProcessTrusted()
+        let screenRecordingStatus = CGPreflightScreenCaptureAccess()
         print("🔍 COMPREHENSIVE Permission Diagnostic:")
-        print("   AXIsProcessTrusted(): \(currentStatus)")
+        print("   AXIsProcessTrusted(): \(accessibilityStatus)")
+        print("   CGPreflightScreenCaptureAccess(): \(screenRecordingStatus)")
         print("   Bundle ID: \(Bundle.main.bundleIdentifier ?? "nil")")
         print("   Bundle path: \(Bundle.main.bundlePath)")
         print("   Executable path: \(Bundle.main.executablePath ?? "nil")")
@@ -225,7 +283,7 @@ class MenuBarManager: ObservableObject {
         testAccessibilityCapability()
         
         // Force refresh the status
-        lastAccessibilityStatus = !currentStatus // Force change detection
+        lastAccessibilityStatus = !accessibilityStatus // Force change detection
         checkPermissionChanges()
     }
     
@@ -254,7 +312,15 @@ class MenuBarManager: ObservableObject {
         let appPath = Bundle.main.bundlePath
         print("   App path: \(appPath)")
         
-        // Create a restart script
+        // Verify this is the expected installation path to prevent old version launches
+        let expectedPath = "/Users/\(NSUserName())/Applications/TextEnhancer.app"
+        if !appPath.contains("/Applications/TextEnhancer.app") {
+            print("⚠️  WARNING: App running from unexpected location: \(appPath)")
+            print("   Expected: \(expectedPath)")
+            print("   This may cause restart issues. Consider reinstalling.")
+        }
+        
+        // Create a restart script that specifically targets the current running version
         let restartScript = """
         #!/bin/bash
         sleep 1

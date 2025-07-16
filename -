@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>trustList</key>
+	<dict>
+		<key>58A40A32B60259C3513D6D45A6F6C8D94731223F</key>
+		<dict>
+			<key>issuerName</key>
+			<data>
+			MF0xETAPBgNVBAoTCGxlbW9uYWRlMR4wHAYDVQQLExVDZXJ0aWZp
+			Y2F0ZSBBdXRob3JpdHkxKDAmBgNVBAMTH2xlbW9uYWRlIEJhbnlh
+			biBQcml2YXRlIFJvb3QgQ0E=
+			</data>
+			<key>modDate</key>
+			<date>2025-03-01T18:36:32Z</date>
+			<key>serialNumber</key>
+			<data>
+			eUpzP2sND7u7Z2zCCW9sU6fw/iM=
+			</data>
+		</dict>
+		<key>C1FC30A63636A84E8EF3A79039E3EE9EBA60D33F</key>
+		<dict>
+			<key>issuerName</key>
+			<data>
+			MDExEjAQBgNVBAoMCU5ldEFsZXJ0czEbMBkGA1UEAwwSTmV0QWxl
+			cnRzIFNlcnZpY2Vz
+			</data>
+			<key>modDate</key>
+			<date>2025-03-01T18:36:36Z</date>
+			<key>serialNumber</key>
+			<data>
+			AIjA3MFIFD3c
+			</data>
+		</dict>
+		<key>CD9AC2EB6AC58EBED19FD54FCCD1B9271994E8A0</key>
+		<dict>
+			<key>issuerName</key>
+			<data>
+			MDoxODA2BgNVBAMTL0xlbW9uYWRlIEluYyBKU1MgQnVpbHQtaW4g
+			Q2VydGlmaWNhdGUgQXV0aG9yaXR5
+			</data>
+			<key>modDate</key>
+			<date>2024-02-07T12:42:02Z</date>
+			<key>serialNumber</key>
+			<data>
+			AKxsClI=
+			</data>
+		</dict>
+	</dict>
+	<key>trustVersion</key>
+	<integer>1</integer>
+</dict>
+</plist>

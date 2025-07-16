@@ -1,0 +1,52 @@
+{
+  "claudeApiKey": "your-claude-api-key-here",
+  "shortcuts": [
+    {
+      "id": "enhance-text",
+      "name": "Enhance Text",
+      "keyCode": 18,
+      "modifiers": ["control", "option"],
+      "prompt": "Improve the writing quality and clarity of this text while maintaining its original meaning and tone.",
+      "provider": "claude",
+      "includeScreenshot": false
+    },
+    {
+      "id": "analyze-with-context",
+      "name": "Analyze with Screen Context",
+      "keyCode": 19,
+      "modifiers": ["control", "option"],
+      "prompt": "Analyze this text considering the visual context shown in the screenshot. Provide insights about how the text relates to what's visible on screen.",
+      "provider": "claude",
+      "includeScreenshot": true
+    },
+    {
+      "id": "fix-with-context",
+      "name": "Fix Text with Visual Context",
+      "keyCode": 20,
+      "modifiers": ["control", "option"],
+      "prompt": "Fix any errors in this text, taking into account the visual context from the screenshot. The screenshot may contain relevant information about formatting, styling, or context that should influence the corrections.",
+      "provider": "claude",
+      "includeScreenshot": true
+    }
+  ],
+  "maxTokens": 1000,
+  "timeout": 30.0,
+  "showStatusIcon": true,
+  "enableNotifications": true,
+  "autoSave": true,
+  "logLevel": "info",
+  "apiProviders": {
+    "claude": {
+      "enabled": true,
+      "apiKey": "your-claude-api-key-here",
+      "model": "claude-3-haiku-20240307",
+      "maxTokens": 1000
+    },
+    "openai": {
+      "enabled": false,
+      "apiKey": "",
+      "model": "gpt-3.5-turbo",
+      "maxTokens": 1000
+    }
+  }
+}

@@ -107,23 +107,33 @@ class ConfigurationManager: ObservableObject {
     }
     
     func loadConfiguration() {
+        print("🔧 ConfigurationManager: Loading configuration...")
+        print("🔧 ConfigurationManager: Looking for local config at: \(localConfigFile.path)")
+        print("🔧 ConfigurationManager: Looking for fallback config at: \(fallbackConfigFile.path)")
+        
         // First try to load from local config.json
         if FileManager.default.fileExists(atPath: localConfigFile.path) {
             do {
                 let data = try Data(contentsOf: localConfigFile)
-                configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
+                self.configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
                 print("✅ Configuration loaded from config.json")
+                print("🔧 ConfigurationManager: Loaded \(configuration.shortcuts.count) shortcuts")
+                for shortcut in configuration.shortcuts {
+                    print("🔧 ConfigurationManager: Shortcut: \(shortcut.id) - \(shortcut.name)")
+                }
                 return
             } catch {
                 print("❌ Failed to load local configuration: \(error)")
             }
+        } else {
+            print("🔧 ConfigurationManager: Local config file does not exist")
         }
         
         // Fallback to app support directory
         if FileManager.default.fileExists(atPath: fallbackConfigFile.path) {
             do {
                 let data = try Data(contentsOf: fallbackConfigFile)
-                configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
+                self.configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
                 print("✅ Configuration loaded from app support directory")
                 return
             } catch {
@@ -161,7 +171,8 @@ struct AppConfiguration: Codable {
                 keyCode: 18, // Key "1"
                 modifiers: [.control, .option],
                 prompt: "Improve the writing quality and clarity of this text while maintaining its original meaning and tone.",
-                provider: .claude
+                provider: .claude,
+                includeScreenshot: false
             )
         ],
         maxTokens: 1000,
@@ -181,10 +192,16 @@ struct ShortcutConfiguration: Codable {
     let modifiers: [ModifierKey]
     let prompt: String
     let provider: APIProvider? // Optional for backward compatibility
+    let includeScreenshot: Bool? // Optional for backward compatibility
     
     // Default provider for backward compatibility
     var effectiveProvider: APIProvider {
         return provider ?? .claude
+    }
+    
+    // Default screenshot setting for backward compatibility
+    var effectiveIncludeScreenshot: Bool {
+        return includeScreenshot ?? false
     }
 }
 

@@ -14,6 +14,10 @@ class OpenAIService: ObservableObject {
     }
     
     func enhanceText(_ text: String, with prompt: String) async throws -> String {
+        return try await enhanceText(text, with: prompt, screenContext: nil)
+    }
+    
+    func enhanceText(_ text: String, with prompt: String, screenContext: String?) async throws -> String {
         // For now, check if OpenAI API key is configured in the claudeApiKey field
         // TODO: Update configuration schema to support multiple API providers
         guard let apiKey = configManager.claudeApiKey, !apiKey.isEmpty else {

@@ -21,14 +21,21 @@ class ClaudeService: ObservableObject {
     }
     
     func enhanceText(_ text: String, with prompt: String) async throws -> String {
+        return try await enhanceText(text, with: prompt, screenContext: nil)
+    }
+    
+    func enhanceText(_ text: String, with prompt: String, screenContext: String?) async throws -> String {
         print("🔧 ClaudeService: Enhancing text (\(text.count) characters)")
+        if screenContext != nil {
+            print("🔧 ClaudeService: Including screen context")
+        }
         
         guard let apiKey = configManager.claudeApiKey, !apiKey.isEmpty else {
             print("❌ ClaudeService: API key missing or empty")
             throw ClaudeError.missingApiKey
         }
         
-        let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey)
+        let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey, screenContext: screenContext)
         
         let (data, response) = try await urlSession.data(for: request)
         
@@ -63,7 +70,7 @@ class ClaudeService: ObservableObject {
         }
     }
     
-    internal func createRequest(text: String, prompt: String, apiKey: String) throws -> URLRequest {
+    internal func createRequest(text: String, prompt: String, apiKey: String, screenContext: String? = nil) throws -> URLRequest {
         guard let url = URL(string: apiURL) else {
             throw ClaudeError.invalidURL
         }
@@ -76,32 +83,59 @@ class ClaudeService: ObservableObject {
         request.timeoutInterval = 30.0
         request.cachePolicy = .reloadIgnoringLocalCacheData
         
-        let fullPrompt = """
-        \(prompt)
-        
-        Text to enhance:
-        \(text)
-        
-        Respond ONLY with valid JSON exactly matching this schema:
-        {
-            "enhancedText": "<improved text>"
+        let basePrompt: String
+        if text == "[Screenshot analysis requested]" {
+            // Screenshot-only mode
+            basePrompt = prompt
+        } else {
+            // Normal text enhancement mode
+            basePrompt = """
+            \(prompt)
+            
+            Text to enhance:
+            \(text)
+            """
         }
-        No additional keys, comments, markdown, or code fences.
+        
+        let jsonInstructions = """
+        
+        CRITICAL: You must respond with ONLY a valid JSON object. No explanations, no markdown, no code blocks, no additional text.
+        
+        Required JSON format:
+        {"enhancedText": "your enhanced text here"}
+        
+        Do not include any text before or after the JSON object.
         """
         
-        let requestBody = ClaudeRequest(
-            model: modelName,
-            max_tokens: maxTokens,
-            messages: [
-                ClaudeMessage(role: "user", content: fullPrompt)
-            ]
-        )
+        let textPrompt = basePrompt + jsonInstructions
         
-        do {
+        if let screenContext = screenContext {
+            // Create multimodal message with screen context
+            let messageContent = [
+                ClaudeMessageContent(type: "image", source: ClaudeImageSource(type: "base64", media_type: "image/jpeg", data: screenContext)),
+                ClaudeMessageContent(type: "text", text: textPrompt)
+            ]
+            
+            let requestBody = ClaudeRequestMultimodal(
+                model: modelName,
+                max_tokens: maxTokens,
+                messages: [
+                    ClaudeMessageMultimodal(role: "user", content: messageContent)
+                ]
+            )
+            
             request.httpBody = try JSONEncoder().encode(requestBody)
-        } catch {
-            print("❌ ClaudeService: Failed to encode request body: \(error)")
-            throw error
+        } else {
+            // Use the simple text-only format for backward compatibility
+            let requestBody = ClaudeRequest(
+                model: modelName,
+                max_tokens: maxTokens,
+                messages: [
+                    ClaudeMessage(role: "user", content: textPrompt)
+                ]
+            )
+            
+            request.httpBody = try JSONEncoder().encode(requestBody)
         }
         
         return request
@@ -119,6 +153,43 @@ struct ClaudeRequest: Codable {
 struct ClaudeMessage: Codable {
     let role: String
     let content: String
+}
+
+// MARK: - Multimodal Request Models
+
+struct ClaudeRequestMultimodal: Codable {
+    let model: String
+    let max_tokens: Int
+    let messages: [ClaudeMessageMultimodal]
+}
+
+struct ClaudeMessageMultimodal: Codable {
+    let role: String
+    let content: [ClaudeMessageContent]
+}
+
+struct ClaudeMessageContent: Codable {
+    let type: String
+    let text: String?
+    let source: ClaudeImageSource?
+    
+    init(type: String, text: String) {
+        self.type = type
+        self.text = text
+        self.source = nil
+    }
+    
+    init(type: String, source: ClaudeImageSource) {
+        self.type = type
+        self.text = nil
+        self.source = source
+    }
+}
+
+struct ClaudeImageSource: Codable {
+    let type: String
+    let media_type: String
+    let data: String
 }
 
 struct ClaudeResponse: Codable {

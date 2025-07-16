@@ -1,6 +1,10 @@
 # TextEnhancer Makefile
 
-.PHONY: build run clean debug release install help
+.PHONY: build run clean debug release install help bundle bundle-signed install-location
+
+# Configuration
+INSTALL_PATH = ~/Applications/TextEnhancer.app
+BUNDLE_NAME = TextEnhancer.app
 
 # Default target
 all: build
@@ -43,14 +47,14 @@ run-release: release stop
 	.build/release/TextEnhancer
 
 # Run as proper app bundle
-run-bundle: bundle stop
+run-bundle: install stop
 	@echo "Running TextEnhancer as app bundle..."
-	open TextEnhancer.app
+	open "$(INSTALL_PATH)"
 
 # Open settings directly
-settings: bundle stop
+settings: install stop
 	@echo "Opening TextEnhancer settings..."
-	open TextEnhancer.app --args --settings
+	open "$(INSTALL_PATH)" --args --settings
 
 # Debug build with verbose output
 debug:
@@ -62,6 +66,12 @@ clean:
 	@echo "Cleaning build artifacts..."
 	swift package clean
 	rm -rf .build
+	rm -rf $(BUNDLE_NAME)
+
+# Clean signing artifacts
+clean-sign: clean
+	@echo "Cleaning signing artifacts..."
+	rm -rf "$(INSTALL_PATH)"
 
 # Install dependencies
 deps:
@@ -73,16 +83,132 @@ update:
 	@echo "Updating dependencies..."
 	swift package update
 
-# Create app bundle (for distribution)
-bundle: release
-	@echo "Creating app bundle..."
-	rm -rf TextEnhancer.app
-	mkdir -p TextEnhancer.app/Contents/{MacOS,Resources}
-	cp .build/release/TextEnhancer TextEnhancer.app/Contents/MacOS/
-	cp Info.plist TextEnhancer.app/Contents/Info.plist
-	cp TextEnhancer.entitlements TextEnhancer.app/Contents/Resources/
-	@echo "App bundle created: TextEnhancer.app"
-	@echo "To run: open TextEnhancer.app"
+# Check for signing certificate
+check-sign:
+	@echo "Checking for code signing certificate..."
+	@if [ -z "$(SIGN_ID)" ]; then \
+		echo "ℹ️  SIGN_ID not set, checking for available certificates..."; \
+		CERT_OUTPUT=$$(security find-identity -v -p codesigning 2>/dev/null); \
+		CERT_COUNT=$$(echo "$$CERT_OUTPUT" | grep -c "valid identities found" || echo "0"); \
+		if echo "$$CERT_OUTPUT" | grep -q "0 valid identities found"; then \
+			echo "⚠️  No code signing certificates found"; \
+			echo "📝 To enable persistent accessibility permissions:"; \
+			echo "   1. Create a development certificate in Xcode"; \
+			echo "   2. Export SIGN_ID=\"Your Certificate Name\""; \
+			echo "   3. Run 'make bundle-signed' instead of 'make bundle'"; \
+			echo ""; \
+			echo "🔧 For now, building unsigned (permissions will reset on rebuild)"; \
+		else \
+			echo "✅ Found signing certificates, but SIGN_ID not set"; \
+			echo "📝 Available certificates:"; \
+			security find-identity -v -p codesigning; \
+			echo ""; \
+			echo "💡 Set SIGN_ID to use signing: export SIGN_ID=\"Certificate Name\""; \
+		fi; \
+	else \
+		echo "✅ SIGN_ID set to: $(SIGN_ID)"; \
+	fi
+
+# Create app bundle (unsigned - permissions will reset on rebuild)
+bundle: release check-sign
+	@echo "Creating unsigned app bundle..."
+	rm -rf $(BUNDLE_NAME)
+	mkdir -p $(BUNDLE_NAME)/Contents/{MacOS,Resources}
+	cp .build/release/TextEnhancer $(BUNDLE_NAME)/Contents/MacOS/
+	cp Info.plist $(BUNDLE_NAME)/Contents/Info.plist
+	cp TextEnhancer.entitlements $(BUNDLE_NAME)/Contents/Resources/
+	@echo "✅ Unsigned app bundle created: $(BUNDLE_NAME)"
+	@if [ -z "$(SIGN_ID)" ]; then \
+		echo "⚠️  Bundle is unsigned - accessibility permissions will reset on rebuild"; \
+		echo "💡 Use 'make bundle-signed' for persistent permissions"; \
+	fi
+
+# Create app bundle (signed - permissions will persist across rebuilds)
+bundle-signed: release
+	@if [ -z "$(SIGN_ID)" ]; then \
+		echo "❌ SIGN_ID not set. Please export SIGN_ID=\"Your Certificate Name\""; \
+		echo "📝 Available certificates:"; \
+		security find-identity -v -p codesigning; \
+		exit 1; \
+	fi
+	@echo "Creating signed app bundle with certificate: $(SIGN_ID)"
+	rm -rf $(BUNDLE_NAME)
+	mkdir -p $(BUNDLE_NAME)/Contents/{MacOS,Resources}
+	cp .build/release/TextEnhancer $(BUNDLE_NAME)/Contents/MacOS/
+	cp Info.plist $(BUNDLE_NAME)/Contents/Info.plist
+	cp TextEnhancer.entitlements $(BUNDLE_NAME)/Contents/Resources/
+	@echo "🔏 Signing app bundle..."
+	codesign --force --deep \
+		--entitlements TextEnhancer.entitlements \
+		--sign "$(SIGN_ID)" $(BUNDLE_NAME)
+	@echo "✅ Signed app bundle created: $(BUNDLE_NAME)"
+	@echo "🎯 Accessibility permissions will now persist across rebuilds!"
+
+# Install app bundle to Applications folder
+install: bundle
+	@echo "Installing TextEnhancer to $(INSTALL_PATH)..."
+	@mkdir -p "$$(dirname "$(INSTALL_PATH)")"
+	@if [ -d "$(INSTALL_PATH)" ]; then \
+		echo "🗑️  Removing existing installation..."; \
+		rm -rf "$(INSTALL_PATH)"; \
+	fi
+	cp -R $(BUNDLE_NAME) "$(INSTALL_PATH)"
+	@echo "📄 Copying local config.json to app support directory..."
+	@mkdir -p ~/Library/Application\ Support/TextEnhancer/
+	@if [ -f "config.json" ]; then \
+		cp config.json ~/Library/Application\ Support/TextEnhancer/config.json; \
+		echo "✅ Local config.json copied to app support directory"; \
+	else \
+		echo "⚠️  No local config.json found - using existing config"; \
+	fi
+	@echo "✅ TextEnhancer installed to $(INSTALL_PATH)"
+
+# Install signed app bundle to Applications folder
+install-signed: bundle-signed
+	@echo "Installing signed TextEnhancer to $(INSTALL_PATH)..."
+	@mkdir -p "$$(dirname "$(INSTALL_PATH)")"
+	@if [ -d "$(INSTALL_PATH)" ]; then \
+		echo "🗑️  Removing existing installation..."; \
+		rm -rf "$(INSTALL_PATH)"; \
+	fi
+	cp -R $(BUNDLE_NAME) "$(INSTALL_PATH)"
+	@echo "📄 Copying local config.json to app support directory..."
+	@mkdir -p ~/Library/Application\ Support/TextEnhancer/
+	@if [ -f "config.json" ]; then \
+		cp config.json ~/Library/Application\ Support/TextEnhancer/config.json; \
+		echo "✅ Local config.json copied to app support directory"; \
+	else \
+		echo "⚠️  No local config.json found - using existing config"; \
+	fi
+	@echo "✅ Signed TextEnhancer installed to $(INSTALL_PATH)"
+	@echo "🎯 Launch from $(INSTALL_PATH) for persistent accessibility permissions!"
+
+# Show install location
+install-location:
+	@echo "📍 TextEnhancer install location: $(INSTALL_PATH)"
+	@if [ -d "$(INSTALL_PATH)" ]; then \
+		echo "✅ TextEnhancer is installed"; \
+		echo "📝 Version: $$(defaults read "$(INSTALL_PATH)/Contents/Info.plist" CFBundleVersion 2>/dev/null || echo "unknown")"; \
+		echo "🔏 Signed: $$(codesign -dv "$(INSTALL_PATH)" 2>&1 | grep -q "Signature=" && echo "Yes" || echo "No")"; \
+	else \
+		echo "❌ TextEnhancer is not installed"; \
+		echo "💡 Run 'make install' or 'make install-signed' to install"; \
+	fi
+
+# Notarize the signed app (requires Apple ID setup)
+notarize: bundle-signed
+	@if [ -z "$(NOTARY_PROFILE)" ]; then \
+		echo "❌ NOTARY_PROFILE not set. Please set up notarytool first:"; \
+		echo "   xcrun notarytool store-credentials TEXTENHANCER_NOTARY"; \
+		echo "   export NOTARY_PROFILE=TEXTENHANCER_NOTARY"; \
+		exit 1; \
+	fi
+	@echo "📤 Submitting for notarization..."
+	xcrun notarytool submit $(BUNDLE_NAME) \
+		--keychain-profile "$(NOTARY_PROFILE)" --wait
+	@echo "📎 Stapling notarization ticket..."
+	xcrun stapler staple $(BUNDLE_NAME)
+	@echo "✅ App notarized and stapled!"
 
 # Format code
 format:
@@ -103,24 +229,45 @@ check:
 help:
 	@echo "TextEnhancer Build System"
 	@echo ""
-	@echo "Available targets:"
-	@echo "  build      - Build the application (debug)"
-	@echo "  release    - Build the application (release)"
-	@echo "  run        - Build and run the application"
-	@echo "  run-release- Build and run the release version"
-	@echo "  run-bundle - Create and run as app bundle (recommended)"
-	@echo "  settings   - Open settings window directly"
-	@echo "  debug      - Build with verbose output"
-	@echo "  clean      - Clean build artifacts"
-	@echo "  deps       - Resolve dependencies"
-	@echo "  update     - Update dependencies"
-	@echo "  bundle     - Create app bundle for distribution"
-	@echo "  test       - Run tests with coverage"
-	@echo "  format     - Format Swift code"
-	@echo "  lint       - Lint Swift code"
-	@echo "  check      - Check for common issues"
-	@echo "  stop       - Stop any running TextEnhancer instances"
-	@echo "  help       - Show this help message"
+	@echo "🏗️  Build targets:"
+	@echo "  build         - Build the application (debug)"
+	@echo "  release       - Build the application (release)"
+	@echo "  bundle        - Create unsigned app bundle"
+	@echo "  bundle-signed - Create signed app bundle (persistent permissions)"
+	@echo ""
+	@echo "🚀 Run targets:"
+	@echo "  run           - Build and run debug version"
+	@echo "  run-release   - Build and run release version"
+	@echo "  run-bundle    - Install and run app bundle"
+	@echo "  settings      - Open settings window directly"
+	@echo ""
+	@echo "📦 Install targets:"
+	@echo "  install       - Install unsigned bundle to ~/Applications"
+	@echo "  install-signed- Install signed bundle to ~/Applications"
+	@echo "  install-location - Show install status and location"
+	@echo ""
+	@echo "🔏 Signing targets:"
+	@echo "  check-sign    - Check signing certificate status"
+	@echo "  notarize      - Notarize signed app (requires setup)"
+	@echo ""
+	@echo "🧹 Maintenance:"
+	@echo "  clean         - Clean build artifacts"
+	@echo "  clean-sign    - Clean build and signing artifacts"
+	@echo "  deps          - Resolve dependencies"
+	@echo "  update        - Update dependencies"
+	@echo "  stop          - Stop any running TextEnhancer instances"
+	@echo ""
+	@echo "🧪 Development:"
+	@echo "  test          - Run tests with coverage"
+	@echo "  debug         - Build with verbose output"
+	@echo "  format        - Format Swift code"
+	@echo "  lint          - Lint Swift code"
+	@echo "  check         - Check for common issues"
+	@echo ""
+	@echo "💡 For persistent accessibility permissions:"
+	@echo "   1. Create development certificate in Xcode"
+	@echo "   2. export SIGN_ID=\"Apple Development: Your Name (TEAMID)\""
+	@echo "   3. make install-signed && open ~/Applications/TextEnhancer.app"
 	@echo ""
 	@echo "Usage: make [target]"
 

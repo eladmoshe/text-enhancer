@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 TextEnhancer is a native macOS application that captures selected text, enhances it using Claude AI, and replaces the original text via keyboard shortcuts. It's currently in Phase 1 MVP with plans for Phase 2 multi-shortcut support.
 
+## Best Practices
+
+- Markdown files that document the app structure and behavior should be in the docs folder
+
 ## Build Commands
 
 ### Primary Build Commands
@@ -52,6 +56,51 @@ make clean         # Clean build artifacts
 make deps          # Resolve dependencies
 make help          # Show all make targets
 ```
+
+### Debugging and Development Notes
+
+**CRITICAL: Always use debug binary for development**
+When making code changes, the app bundle may not pick up changes due to caching. For development:
+
+```bash
+# For immediate code changes during development
+.build/debug/TextEnhancer &   # Run debug binary directly
+
+# For testing with permissions (slower but official)
+./build.sh --run              # Debug version (no persistent permissions)
+./build.sh --bundle           # Unsigned bundle (permissions reset)
+./build.sh --bundle-signed    # Signed bundle (persistent permissions)
+```
+
+**Debug Output:**
+- Debug binary: Outputs NSLog messages to console/terminal
+- App bundle: Outputs to Console.app (search for "TextEnhancer")
+- Use NSLog() instead of print() for release builds
+
+### Critical Development Issues
+
+**IMPORTANT: App Installation and Versioning**
+
+The app can have multiple installations that cause conflicts:
+1. **Debug binary:** `.build/debug/TextEnhancer` (no permissions, development only)
+2. **Local bundle:** `./TextEnhancer.app` (created by build script)
+3. **User Applications:** `~/Applications/TextEnhancer.app` (primary installation)
+4. **System Applications:** `/Applications/TextEnhancer.app` (potential old version)
+
+**To prevent version conflicts:**
+```bash
+# Before each development session
+find /Applications ~/Applications -name "TextEnhancer.app" -exec rm -rf {} \; 2>/dev/null
+
+# Always build fresh
+./build.sh --bundle
+cp -R TextEnhancer.app ~/Applications/
+```
+
+**Restart Mechanism:**
+- App restart uses `Bundle.main.bundlePath` to relaunch
+- If multiple versions exist, macOS may launch the wrong one
+- Always ensure only one TextEnhancer.app exists in Applications directories
 
 ## Architecture
 

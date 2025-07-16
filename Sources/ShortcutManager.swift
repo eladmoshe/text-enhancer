@@ -121,6 +121,12 @@ class ShortcutManager: ObservableObject {
     }
     
     private func handleShortcut(_ shortcut: RegisteredShortcut) {
+        let debugMsg = "🔧 ShortcutManager: Shortcut triggered - ID: \(shortcut.id), Name: \(shortcut.name), Prompt: '\(shortcut.prompt)'"
+        print(debugMsg)
+        
+        // Also write to debug file
+        try? (debugMsg + "\n").write(to: URL(fileURLWithPath: "/Users/elad.moshe/my-code/text-llm-modify/debug.log"), atomically: false, encoding: .utf8)
+        
         Task {
             await textProcessor.processSelectedText(with: shortcut.prompt)
         }

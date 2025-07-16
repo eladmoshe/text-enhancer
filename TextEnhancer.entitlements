@@ -35,5 +35,9 @@
     
     <key>com.apple.security.device.camera</key>
     <false/>
+    
+    <!-- Required for screen capture -->
+    <key>com.apple.security.device.capture</key>
+    <true/>
 </dict>
 </plist> 

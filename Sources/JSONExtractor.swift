@@ -103,6 +103,17 @@ class JSONExtractor {
     
     /// Extracts JSON object by finding the first complete JSON object
     private static func extractJSONObject(_ response: String) -> String {
+        // First try to find all potential JSON objects
+        let possibleJSONs = findAllJSONObjects(in: response)
+        
+        // Try each potential JSON object until we find one that works
+        for jsonCandidate in possibleJSONs {
+            if isValidJSON(jsonCandidate) {
+                return jsonCandidate
+            }
+        }
+        
+        // Fall back to original simple extraction
         guard let startIndex = response.firstIndex(of: "{") else {
             return response // Return as-is if no opening brace found
         }
@@ -133,5 +144,54 @@ class JSONExtractor {
         }
         
         return response
+    }
+    
+    /// Finds all potential JSON objects in the response
+    private static func findAllJSONObjects(in response: String) -> [String] {
+        var objects: [String] = []
+        var currentIndex = response.startIndex
+        
+        while currentIndex < response.endIndex {
+            if response[currentIndex] == "{" {
+                var braceCount = 0
+                var jsonStart = currentIndex
+                var jsonEnd = currentIndex
+                
+                // Find the matching closing brace for this opening brace
+                while currentIndex < response.endIndex {
+                    let char = response[currentIndex]
+                    if char == "{" {
+                        braceCount += 1
+                    } else if char == "}" {
+                        braceCount -= 1
+                        if braceCount == 0 {
+                            jsonEnd = currentIndex
+                            let jsonRange = jsonStart...jsonEnd
+                            let jsonCandidate = String(response[jsonRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                            objects.append(jsonCandidate)
+                            break
+                        }
+                    }
+                    currentIndex = response.index(after: currentIndex)
+                }
+            }
+            
+            if currentIndex < response.endIndex {
+                currentIndex = response.index(after: currentIndex)
+            }
+        }
+        
+        return objects
+    }
+    
+    /// Checks if a string is valid JSON
+    private static func isValidJSON(_ string: String) -> Bool {
+        guard let data = string.data(using: .utf8) else { return false }
+        do {
+            _ = try JSONSerialization.jsonObject(with: data, options: [])
+            return true
+        } catch {
+            return false
+        }
     }
 } 

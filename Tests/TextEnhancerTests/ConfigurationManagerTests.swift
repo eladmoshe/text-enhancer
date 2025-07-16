@@ -87,7 +87,8 @@ final class ConfigurationManagerTests: XCTestCase {
                     keyCode: 42,
                     modifiers: [.command, .shift],
                     prompt: "Test prompt",
-                    provider: nil
+                    provider: nil,
+                    includeScreenshot: nil
                 )
             ],
             maxTokens: 2000,

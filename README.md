@@ -28,10 +28,13 @@ A native macOS application that captures selected text, enhances it using Claude
 
 2. Build and run the application:
    ```bash
-   # Recommended: Create and run as app bundle
+   # Recommended: Signed app bundle (persistent accessibility permissions)
+   ./build.sh --bundle-signed
+   
+   # Or unsigned app bundle (permissions reset on rebuild)
    ./build.sh --bundle
    
-   # Or build and run debug executable
+   # Or debug executable (permissions reset on rebuild)
    ./build.sh --run
    
    # Or build manually
@@ -46,9 +49,14 @@ A native macOS application that captures selected text, enhances it using Claude
    - The app will prompt you to grant accessibility permissions
    - Go to System Settings > Privacy & Security > Accessibility
    - Add TextEnhancer to the list of allowed applications
-   - **Note**: Running as app bundle (recommended) will show "TextEnhancer" in the permissions dialog. Running the raw executable may show the terminal app name instead.
 
-2. **Set Up Claude API Key**:
+2. **For Persistent Permissions** (Recommended):
+   - By default, accessibility permissions reset after each rebuild
+   - To make permissions persist across rebuilds, use code signing
+   - See [Accessibility Permissions Setup Guide](docs/ACCESSIBILITY_PERMISSIONS.md) for detailed instructions
+   - Quick setup: Create development certificate in Xcode, then use `./build.sh --bundle-signed`
+
+3. **Set Up Claude API Key**:
    - Right-click the TextEnhancer icon in the menu bar
    - Select "Settings..."
    - Enter your Claude API key from https://console.anthropic.com/

@@ -142,7 +142,7 @@ final class TextProcessorTests: XCTestCase {
         await textProcessor.processSelectedText(with: "Test prompt")
         
         // Then: Should request permissions and show error
-        XCTAssertEqual(mockAccessibilityChecker.isAccessibilityEnabledCallCount, 2) // Called twice
+        XCTAssertEqual(mockAccessibilityChecker.isAccessibilityEnabledCallCount, 1) // Called once
         XCTAssertEqual(mockAccessibilityChecker.requestAccessibilityPermissionsCallCount, 1)
         XCTAssertEqual(mockAlertPresenter.showErrorCallCount, 1)
         XCTAssertTrue(mockAlertPresenter.mockErrorMessage?.contains("Accessibility permissions are required") ?? false)

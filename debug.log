@@ -1,0 +1,7 @@
+🔧 TextProcessor: Checking shortcut for prompt: 'Expand this text with more details, examples, and explanations while maintaining clarity.'
+🔧 TextProcessor: Available shortcuts:
+🔧   - ID: 'improve-text', Name: 'Improve Text', Prompt: 'Improve the writing quality and clarity of this text while maintaining its original meaning and tone.'
+🔧   - ID: 'summarize', Name: 'Summarize', Prompt: 'Provide a concise summary of this text, highlighting the main points.'
+🔧   - ID: 'expand', Name: 'Expand', Prompt: 'Expand this text with more details, examples, and explanations while maintaining clarity.'
+🔧   - ID: 'describe-screen', Name: 'Describe Screen', Prompt: 'Describe what you see in this screenshot. Explain what is happening on the screen, what applications are open, what content is visible, and any notable elements or activities.'
+🔧 TextProcessor: Found shortcut: expand, name: Expand, includeScreenshot: false

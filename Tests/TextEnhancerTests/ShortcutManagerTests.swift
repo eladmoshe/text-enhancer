@@ -22,7 +22,8 @@ final class ShortcutManagerTests: XCTestCase {
                     keyCode: 18,
                     modifiers: [.control, .option],
                     prompt: "Improve the writing quality and clarity of this text.",
-                    provider: nil
+                    provider: nil,
+                    includeScreenshot: nil
                 ),
                 ShortcutConfiguration(
                     id: "make-formal",
@@ -30,7 +31,8 @@ final class ShortcutManagerTests: XCTestCase {
                     keyCode: 19,
                     modifiers: [.control, .option],
                     prompt: "Rewrite this text in a formal tone.",
-                    provider: nil
+                    provider: nil,
+                    includeScreenshot: nil
                 ),
                 ShortcutConfiguration(
                     id: "summarize",
@@ -38,7 +40,8 @@ final class ShortcutManagerTests: XCTestCase {
                     keyCode: 20,
                     modifiers: [.control, .option],
                     prompt: "Provide a concise summary of this text.",
-                    provider: nil
+                    provider: nil,
+                    includeScreenshot: nil
                 )
             ],
             maxTokens: 1000,
@@ -111,7 +114,8 @@ final class ShortcutManagerTests: XCTestCase {
                     keyCode: 18,
                     modifiers: [.control, .option],
                     prompt: "First prompt",
-                    provider: nil
+                    provider: nil,
+                    includeScreenshot: nil
                 ),
                 ShortcutConfiguration(
                     id: "second",
@@ -119,7 +123,8 @@ final class ShortcutManagerTests: XCTestCase {
                     keyCode: 18, // Same key code
                     modifiers: [.control, .option], // Same modifiers
                     prompt: "Second prompt",
-                    provider: nil
+                    provider: nil,
+                    includeScreenshot: nil
                 )
             ],
             maxTokens: 1000,
