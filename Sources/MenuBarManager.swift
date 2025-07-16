@@ -231,17 +231,31 @@ class MenuBarManager: ObservableObject {
         print("🔐 MenuBarManager: Current screen recording status: \(currentStatus)")
         
         if !currentStatus {
-            print("🔐 MenuBarManager: Requesting screen recording permissions...")
+            print("🔐 MenuBarManager: Opening System Preferences for screen recording permission")
             
-            // Request screen recording permissions - this will prompt the user
-            let result = CGRequestScreenCaptureAccess()
-            print("🔐 MenuBarManager: Screen recording permission request result: \(result)")
-            
-            if !result {
-                // Open System Preferences to Screen Recording if request failed
-                print("🔐 MenuBarManager: Opening System Preferences for manual permission grant")
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                    NSWorkspace.shared.open(url)
+            // Always open System Preferences directly for screen recording permissions
+            // CGRequestScreenCaptureAccess() doesn't work reliably in unsigned apps
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                NSWorkspace.shared.open(url)
+                
+                // Show alert with instructions
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    let alert = NSAlert()
+                    alert.messageText = "Screen Recording Permission Required"
+                    alert.informativeText = """
+                    To enable screenshot functionality:
+                    
+                    1. In System Settings > Privacy & Security > Screen Recording
+                    2. Click the '+' button
+                    3. Navigate to and select TextEnhancer.app
+                    4. Enable the checkbox next to TextEnhancer
+                    5. Restart TextEnhancer
+                    
+                    App location: \(Bundle.main.bundlePath)
+                    """
+                    alert.alertStyle = .informational
+                    alert.addButton(withTitle: "OK")
+                    alert.runModal()
                 }
             }
         } else {
@@ -441,13 +455,27 @@ class MenuBarManager: ObservableObject {
                 button.title = "⏳"
             }
         } else if !accessibilityEnabled {
-            // Show warning icon when accessibility permissions are not granted
-            if let image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: "Accessibility permissions required") {
-                button.image = image
-                button.image?.size = NSSize(width: 16, height: 16)
-                button.image?.isTemplate = true
+            // Show different warning icons based on whether we're running in bundle or not
+            let isBundle = !Bundle.main.bundlePath.contains("/.build/")
+            
+            if isBundle {
+                // Production (bundled): Use triangle with exclamation mark
+                if let image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: "Accessibility permissions required") {
+                    button.image = image
+                    button.image?.size = NSSize(width: 16, height: 16)
+                    button.image?.isTemplate = true
+                } else {
+                    button.title = "⚠️"
+                }
             } else {
-                button.title = "⚠️"
+                // Development (non-bundled): Use wrench to indicate development mode
+                if let image = NSImage(systemSymbolName: "wrench", accessibilityDescription: "Development mode - permissions required") {
+                    button.image = image
+                    button.image?.size = NSSize(width: 16, height: 16)
+                    button.image?.isTemplate = true
+                } else {
+                    button.title = "🔧"
+                }
             }
         } else {
             if let image = NSImage(systemSymbolName: "wand.and.stars", accessibilityDescription: "Text Enhancer") {
