@@ -85,7 +85,6 @@ final class TextProcessorTests: XCTestCase {
         
         // Create configuration
         let config = AppConfiguration(
-            claudeApiKey: "test-api-key",
             shortcuts: [],
             maxTokens: 1000,
             timeout: 30.0,
@@ -93,7 +92,10 @@ final class TextProcessorTests: XCTestCase {
             enableNotifications: true,
             autoSave: true,
             logLevel: "info",
-            apiProviders: nil
+            apiProviders: APIProviders(
+                claude: APIProviderConfig(apiKey: "test-api-key", model: "claude-3-haiku-20240307", enabled: true),
+                openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
+            )
         )
         
         let configData = try! JSONEncoder().encode(config)
@@ -142,7 +144,7 @@ final class TextProcessorTests: XCTestCase {
         await textProcessor.processSelectedText(with: "Test prompt")
         
         // Then: Should request permissions and show error
-        XCTAssertEqual(mockAccessibilityChecker.isAccessibilityEnabledCallCount, 1) // Called once
+        XCTAssertEqual(mockAccessibilityChecker.isAccessibilityEnabledCallCount, 2) // Called twice (initial check + recheck)
         XCTAssertEqual(mockAccessibilityChecker.requestAccessibilityPermissionsCallCount, 1)
         XCTAssertEqual(mockAlertPresenter.showErrorCallCount, 1)
         XCTAssertTrue(mockAlertPresenter.mockErrorMessage?.contains("Accessibility permissions are required") ?? false)
@@ -176,10 +178,9 @@ final class TextProcessorTests: XCTestCase {
         XCTAssertEqual(mockAlertPresenter.mockErrorMessage, "No text selected")
     }
     
-    func test_processSelectedText_apiKeyMissing() async {
+    func test_processSelectedText_noApiKeyConfigured() async {
         // Given: No API key configured
         let configWithoutKey = AppConfiguration(
-            claudeApiKey: "",
             shortcuts: [],
             maxTokens: 1000,
             timeout: 30.0,
@@ -187,7 +188,10 @@ final class TextProcessorTests: XCTestCase {
             enableNotifications: true,
             autoSave: true,
             logLevel: "info",
-            apiProviders: nil
+            apiProviders: APIProviders(
+                claude: APIProviderConfig(apiKey: "", model: "claude-3-haiku-20240307", enabled: true),
+                openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
+            )
         )
         
         let configData = try! JSONEncoder().encode(configWithoutKey)
@@ -198,8 +202,6 @@ final class TextProcessorTests: XCTestCase {
             appSupportDir: tempDir.appSupportDirectory()
         )
         
-        let _ = ClaudeService(configManager: configManagerWithoutKey) // Unused but needed for test structure
-        
         let textProcessorWithoutKey = TextProcessor(
             configManager: configManagerWithoutKey,
             textSelectionProvider: mockTextSelectionProvider,
@@ -208,6 +210,7 @@ final class TextProcessorTests: XCTestCase {
             alertPresenter: mockAlertPresenter
         )
         
+        // Given: Accessibility enabled and text selected
         mockAccessibilityChecker.mockIsAccessibilityEnabled = true
         mockTextSelectionProvider.mockSelectedText = "Test text"
         

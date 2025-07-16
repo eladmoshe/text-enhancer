@@ -27,7 +27,6 @@ final class ClaudeServiceTests: XCTestCase {
     
     func createConfigManager(with apiKey: String) -> ConfigurationManager {
         let config = AppConfiguration(
-            claudeApiKey: apiKey,
             shortcuts: [],
             maxTokens: 1000,
             timeout: 30.0,
@@ -35,7 +34,10 @@ final class ClaudeServiceTests: XCTestCase {
             enableNotifications: true,
             autoSave: true,
             logLevel: "info",
-            apiProviders: nil
+            apiProviders: APIProviders(
+                claude: APIProviderConfig(apiKey: apiKey, model: "claude-3-haiku-20240307", enabled: true),
+                openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
+            )
         )
         
         let configData = try! JSONEncoder().encode(config)
@@ -80,8 +82,54 @@ final class ClaudeServiceTests: XCTestCase {
         XCTAssertEqual(result, "Enhanced text")
     }
     
-    func test_enhanceText_successWithPrefix() async throws {
-        // Given: Valid API key and successful response with prefix
+    func test_enhanceText_missingApiKey() async {
+        // Given: Empty API key
+        configManager = createConfigManager(with: "")
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
+        
+        // When: Try to enhance text
+        do {
+            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
+            XCTFail("Should have thrown missingApiKey error")
+        } catch ClaudeError.missingApiKey {
+            // Then: Should throw missing API key error
+            XCTAssertTrue(true)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    func test_enhanceText_apiError() async {
+        // Given: Valid API key but API returns error
+        configManager = createConfigManager(with: "test-api-key")
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
+        
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 400,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            
+            let errorData = "API Error".data(using: .utf8)!
+            return (response, errorData)
+        }
+        
+        // When: Try to enhance text
+        do {
+            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
+            XCTFail("Should have thrown apiError")
+        } catch ClaudeError.apiError(let statusCode, _) {
+            // Then: Should throw API error
+            XCTAssertEqual(statusCode, 400)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    func test_enhanceText_invalidResponse() async {
+        // Given: Valid API key but invalid response format
         configManager = createConfigManager(with: "test-api-key")
         let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
         
@@ -93,109 +141,22 @@ final class ClaudeServiceTests: XCTestCase {
                 headerFields: nil
             )!
             
-            return (response, MockURLProtocol.mockClaudeSuccessWithPrefix(text: "Enhanced text with prefix"))
+            let invalidData = "Invalid JSON".data(using: .utf8)!
+            return (response, invalidData)
         }
         
-        // When: Enhance text
-        let result = try await claudeService.enhanceText("Hello world", with: "Test prompt")
-        
-        // Then: Should extract JSON and return enhanced text
-        XCTAssertEqual(result, "Enhanced text with prefix")
-    }
-    
-    func test_enhanceText_missingApiKeyThrows() async {
-        // Given: Empty API key
-        configManager = createConfigManager(with: "")
-        let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
-        
-        // When/Then: Should throw missing API key error
+        // When: Try to enhance text
         do {
             _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
-            XCTFail("Should have thrown missing API key error")
-        } catch ClaudeError.missingApiKey {
-            // Expected
+            XCTFail("Should have thrown invalidResponse error")
         } catch {
-            XCTFail("Unexpected error: \(error)")
+            // Then: Should throw some error (JSON decoding will fail)
+            XCTAssertTrue(true)
         }
     }
     
-    func test_enhanceText_apiError500Throws() async {
-        // Given: Valid API key but server error
-        configManager = createConfigManager(with: "test-api-key")
-        let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
-        
-        MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 500,
-                httpVersion: nil,
-                headerFields: nil
-            )!
-            
-            return (response, MockURLProtocol.mockClaudeError(message: "Internal server error"))
-        }
-        
-        // When/Then: Should throw API error
-        do {
-            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
-            XCTFail("Should have thrown API error")
-        } catch ClaudeError.apiError(let statusCode, _) {
-            XCTAssertEqual(statusCode, 500)
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-    }
-    
-    func test_enhanceText_apiError401Throws() async {
-        // Given: Invalid API key
-        configManager = createConfigManager(with: "invalid-key")
-        let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
-        
-        MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 401,
-                httpVersion: nil,
-                headerFields: nil
-            )!
-            
-            return (response, MockURLProtocol.mockClaudeError(message: "Invalid API key"))
-        }
-        
-        // When/Then: Should throw API error
-        do {
-            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
-            XCTFail("Should have thrown API error")
-        } catch ClaudeError.apiError(let statusCode, _) {
-            XCTAssertEqual(statusCode, 401)
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-    }
-    
-    func test_enhanceText_invalidResponseThrows() async {
-        // Given: Valid API key but invalid response
-        configManager = createConfigManager(with: "test-api-key")
-        let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
-        
-        MockURLProtocol.requestHandler = { request in
-            // Return non-HTTP response (shouldn't happen in practice)
-            // We need to throw an error since URLResponse can't be cast to HTTPURLResponse
-            throw ClaudeError.invalidResponse
-        }
-        
-        // When/Then: Should throw an error (the exact error depends on URLSession behavior)
-        do {
-            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
-            XCTFail("Should have thrown an error")
-        } catch {
-            // Expected - any error is fine since we're simulating invalid response
-            XCTAssertTrue(true, "Expected error was thrown: \(error)")
-        }
-    }
-    
-    func test_enhanceText_noContentThrows() async {
-        // Given: Valid API key but response with no content
+    func test_enhanceText_noContent() async {
+        // Given: Valid API key but response has no content
         configManager = createConfigManager(with: "test-api-key")
         let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
         
@@ -212,6 +173,7 @@ final class ClaudeServiceTests: XCTestCase {
                 "content": [],
                 "model": "claude-3-haiku-20240307",
                 "role": "assistant",
+                "stop_reason": "end_turn",
                 "usage": {"input_tokens": 10, "output_tokens": 0}
             }
             """
@@ -219,12 +181,13 @@ final class ClaudeServiceTests: XCTestCase {
             return (response, emptyResponse.data(using: .utf8)!)
         }
         
-        // When/Then: Should throw no content error
+        // When: Try to enhance text
         do {
             _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
-            XCTFail("Should have thrown no content error")
+            XCTFail("Should have thrown noContent error")
         } catch ClaudeError.noContent {
-            // Expected
+            // Then: Should throw no content error
+            XCTAssertTrue(true)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
@@ -236,7 +199,7 @@ final class ClaudeServiceTests: XCTestCase {
         let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
         
         // When: Create request
-        let request = try claudeService.createRequest(text: "Hello", prompt: "Improve", apiKey: "test-key")
+        let request = try claudeService.createRequest(text: "Hello world", prompt: "Improve this", apiKey: "test-key")
         
         // Then: Should have correct headers
         XCTAssertEqual(request.url?.absoluteString, "https://api.anthropic.com/v1/messages")

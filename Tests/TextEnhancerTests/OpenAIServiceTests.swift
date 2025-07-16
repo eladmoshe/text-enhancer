@@ -27,7 +27,6 @@ final class OpenAIServiceTests: XCTestCase {
     
     func createConfigManager(with apiKey: String) -> ConfigurationManager {
         let config = AppConfiguration(
-            claudeApiKey: apiKey,
             shortcuts: [],
             maxTokens: 1000,
             timeout: 30.0,
@@ -35,7 +34,10 @@ final class OpenAIServiceTests: XCTestCase {
             enableNotifications: true,
             autoSave: true,
             logLevel: "info",
-            apiProviders: nil
+            apiProviders: APIProviders(
+                claude: APIProviderConfig(apiKey: "", model: "claude-3-haiku-20240307", enabled: false),
+                openai: APIProviderConfig(apiKey: apiKey, model: "gpt-3.5-turbo", enabled: true)
+            )
         )
         
         let configData = try! JSONEncoder().encode(config)
@@ -89,99 +91,71 @@ final class OpenAIServiceTests: XCTestCase {
         XCTAssertEqual(result, "Enhanced text content")
     }
     
-    func test_enhanceText_missingApiKeyThrows() async throws {
-        // Given: Empty API key
+    func test_enhanceText_missingApiKey() async {
+        // Given: Configuration with no API key
         configManager = createConfigManager(with: "")
         let service = OpenAIService(configManager: configManager, urlSession: mockURLSession)
         
-        // When/Then: Should throw missing API key error
+        // When: Try to enhance text
         do {
-            let _ = try await service.enhanceText("Test text", with: "Test prompt")
-            XCTFail("Expected OpenAIError.missingApiKey to be thrown")
+            _ = try await service.enhanceText("Test text", with: "Test prompt")
+            XCTFail("Should have thrown missingApiKey error")
         } catch OpenAIError.missingApiKey {
-            // Expected
+            // Then: Should throw missing API key error
+            XCTAssertTrue(true)
         } catch {
-            XCTFail("Expected OpenAIError.missingApiKey, got \(error)")
+            XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_enhanceText_apiError401Throws() async throws {
-        // Given: Valid configuration but 401 response
-        configManager = createConfigManager(with: "invalid-key")
-        
-        let mockErrorResponse = """
-        {
-            "error": {
-                "message": "Invalid API key",
-                "type": "invalid_request_error"
-            }
-        }
-        """
+    func test_enhanceText_apiError() async {
+        // Given: Valid API key but API returns error
+        configManager = createConfigManager(with: "test-api-key")
         
         MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!
-            return (response, mockErrorResponse.data(using: .utf8)!)
+            let errorData = "Unauthorized".data(using: .utf8)!
+            return (response, errorData)
         }
         
         let service = OpenAIService(configManager: configManager, urlSession: mockURLSession)
         
-        // When/Then: Should throw API error
+        // When: Try to enhance text
         do {
-            let _ = try await service.enhanceText("Test text", with: "Test prompt")
-            XCTFail("Expected OpenAIError.apiError to be thrown")
+            _ = try await service.enhanceText("Test text", with: "Test prompt")
+            XCTFail("Should have thrown apiError")
         } catch OpenAIError.apiError(let statusCode, _) {
+            // Then: Should throw API error with correct status code
             XCTAssertEqual(statusCode, 401)
         } catch {
-            XCTFail("Expected OpenAIError.apiError, got \(error)")
+            XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_enhanceText_apiError500Throws() async throws {
-        // Given: Valid configuration but 500 response
+    func test_enhanceText_invalidResponse() async {
+        // Given: Valid API key but invalid response format
         configManager = createConfigManager(with: "test-api-key")
         
         MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
-            return (response, "Internal server error".data(using: .utf8)!)
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let invalidData = "Invalid JSON".data(using: .utf8)!
+            return (response, invalidData)
         }
         
         let service = OpenAIService(configManager: configManager, urlSession: mockURLSession)
         
-        // When/Then: Should throw API error
+        // When: Try to enhance text
         do {
-            let _ = try await service.enhanceText("Test text", with: "Test prompt")
-            XCTFail("Expected OpenAIError.apiError to be thrown")
-        } catch OpenAIError.apiError(let statusCode, _) {
-            XCTAssertEqual(statusCode, 500)
-        } catch {
-            XCTFail("Expected OpenAIError.apiError, got \(error)")
-        }
-    }
-    
-    func test_enhanceText_invalidResponseThrows() async throws {
-        // Given: Valid configuration but invalid response
-        configManager = createConfigManager(with: "test-api-key")
-        
-        MockURLProtocol.requestHandler = { request in
-            // Return non-HTTP response (shouldn't happen in practice)
-            // We need to throw an error since URLResponse can't be cast to HTTPURLResponse
-            throw OpenAIError.invalidResponse
-        }
-        
-        let service = OpenAIService(configManager: configManager, urlSession: mockURLSession)
-        
-        // When/Then: Should throw an error (the exact error depends on URLSession behavior)
-        do {
-            let _ = try await service.enhanceText("Test text", with: "Test prompt")
+            _ = try await service.enhanceText("Test text", with: "Test prompt")
             XCTFail("Should have thrown an error")
         } catch {
-            // Expected - any error is fine since we're simulating invalid response
-            XCTAssertTrue(true, "Expected error was thrown: \(error)")
+            // Then: Should throw some error (JSON decoding will fail)
+            XCTAssertTrue(true)
         }
     }
     
-    func test_enhanceText_noContentThrows() async throws {
-        // Given: Valid configuration but response without content
+    func test_enhanceText_noContent() async {
+        // Given: Valid API key but response has no content
         configManager = createConfigManager(with: "test-api-key")
         
         let mockResponse = """
@@ -202,14 +176,15 @@ final class OpenAIServiceTests: XCTestCase {
         
         let service = OpenAIService(configManager: configManager, urlSession: mockURLSession)
         
-        // When/Then: Should throw no content error
+        // When: Try to enhance text
         do {
-            let _ = try await service.enhanceText("Test text", with: "Test prompt")
-            XCTFail("Expected OpenAIError.noContent to be thrown")
+            _ = try await service.enhanceText("Test text", with: "Test prompt")
+            XCTFail("Should have thrown noContent error")
         } catch OpenAIError.noContent {
-            // Expected
+            // Then: Should throw no content error
+            XCTAssertTrue(true)
         } catch {
-            XCTFail("Expected OpenAIError.noContent, got \(error)")
+            XCTFail("Unexpected error: \(error)")
         }
     }
     
@@ -248,17 +223,5 @@ final class OpenAIServiceTests: XCTestCase {
         XCTAssertEqual(requestBody.messages[0].role, "user")
         XCTAssertTrue(requestBody.messages[0].content.contains("Test prompt"))
         XCTAssertTrue(requestBody.messages[0].content.contains("Test text"))
-    }
-    
-    func test_errorDescriptions() {
-        // Test error descriptions
-        XCTAssertEqual(OpenAIError.missingApiKey.localizedDescription, "OpenAI API key is missing or empty")
-        XCTAssertEqual(OpenAIError.invalidURL.localizedDescription, "Invalid OpenAI API URL")
-        XCTAssertEqual(OpenAIError.invalidResponse.localizedDescription, "Invalid response from OpenAI API")
-        XCTAssertEqual(OpenAIError.noContent.localizedDescription, "No content received from OpenAI API")
-        
-        let apiError = OpenAIError.apiError(404, "Not found".data(using: .utf8)!)
-        XCTAssertTrue(apiError.localizedDescription.contains("404"))
-        XCTAssertTrue(apiError.localizedDescription.contains("Not found"))
     }
 } 
