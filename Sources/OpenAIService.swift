@@ -46,12 +46,20 @@ class OpenAIService: ObservableObject {
             throw OpenAIError.noContent
         }
         
-        // Extract JSON from the response content
-        do {
-            let enhancementResponse = try JSONExtractor.extractJSONPayload(from: content)
-            return enhancementResponse.enhancedText
-        } catch {
-            throw OpenAIError.invalidJSONResponse(error)
+        // Check if this is a screenshot-only request
+        let isScreenshotOnly = text == "[Screenshot analysis requested]"
+        
+        if isScreenshotOnly {
+            // For screenshot analysis, return the content directly
+            return content
+        } else {
+            // For text enhancement, extract JSON from the response content
+            do {
+                let enhancementResponse = try JSONExtractor.extractJSONPayload(from: content)
+                return enhancementResponse.enhancedText
+            } catch {
+                throw OpenAIError.invalidJSONResponse(error)
+            }
         }
     }
     
@@ -68,8 +76,10 @@ class OpenAIService: ObservableObject {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         
         let basePrompt: String
-        if text == "[Screenshot analysis requested]" {
-            // Screenshot-only mode
+        let isScreenshotOnly = text == "[Screenshot analysis requested]"
+        
+        if isScreenshotOnly {
+            // Screenshot-only mode - use prompt as-is
             basePrompt = prompt
         } else {
             // Normal text enhancement mode
@@ -81,17 +91,23 @@ class OpenAIService: ObservableObject {
             """
         }
         
-        let jsonInstructions = """
-        
-        CRITICAL: You must respond with ONLY a valid JSON object. No explanations, no markdown, no code blocks, no additional text.
-        
-        Required JSON format:
-        {"enhancedText": "your enhanced text here"}
-        
-        Do not include any text before or after the JSON object.
-        """
-        
-        let textPrompt = basePrompt + jsonInstructions
+        let textPrompt: String
+        if isScreenshotOnly {
+            // For screenshot analysis, don't require JSON format
+            textPrompt = basePrompt
+        } else {
+            // For text enhancement, require JSON format
+            let jsonInstructions = """
+            
+            CRITICAL: You must respond with ONLY a valid JSON object. No explanations, no markdown, no code blocks, no additional text.
+            
+            Required JSON format:
+            {"enhancedText": "your enhanced text here"}
+            
+            Do not include any text before or after the JSON object.
+            """
+            textPrompt = basePrompt + jsonInstructions
+        }
         
         if let screenContext = screenContext {
             // Create multimodal message with screen context for vision-capable models

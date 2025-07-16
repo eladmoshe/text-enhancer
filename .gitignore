@@ -167,4 +167,4 @@ test_output/
 # Backup files
 *.backup
 *.bak
-*~ 
+*~ .swiftpm/
