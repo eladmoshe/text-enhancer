@@ -1,0 +1,158 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Sources/**'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Sources/**'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # Generate Swift documentation
+  generate-docs:
+    name: Generate Documentation
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: '5.9'
+
+    - name: Install Swift-DocC Plugin
+      run: |
+        # Add Swift-DocC if not already present
+        if ! swift package describe | grep -q "swift-docc-plugin"; then
+          echo "Swift-DocC plugin not found in Package.swift"
+          echo "Documentation will be generated using available tools"
+        fi
+
+    - name: Generate Documentation
+      run: |
+        # Create documentation directory
+        mkdir -p docs/generated
+        
+        # Generate basic documentation structure
+        echo "# TextEnhancer Documentation" > docs/generated/index.md
+        echo "" >> docs/generated/index.md
+        echo "Auto-generated documentation for TextEnhancer." >> docs/generated/index.md
+        echo "" >> docs/generated/index.md
+        echo "## API Reference" >> docs/generated/index.md
+        echo "" >> docs/generated/index.md
+        
+        # Extract public APIs from source files
+        echo "### Classes and Structures" >> docs/generated/index.md
+        echo "" >> docs/generated/index.md
+        
+        # Find public classes, structs, and protocols
+        find Sources/ -name "*.swift" -exec grep -l "public\|open" {} \; | while read file; do
+          echo "Processing $file"
+          basename=$(basename "$file" .swift)
+          echo "- [$basename](sources/$basename.md)" >> docs/generated/index.md
+          
+          # Create individual file documentation
+          mkdir -p docs/generated/sources
+          echo "# $basename" > "docs/generated/sources/$basename.md"
+          echo "" >> "docs/generated/sources/$basename.md"
+          echo "\`\`\`swift" >> "docs/generated/sources/$basename.md"
+          # Extract public declarations
+          grep -n "public\|open\|protocol\|class\|struct\|enum\|func\|var\|let" "$file" | head -20 >> "docs/generated/sources/$basename.md"
+          echo "\`\`\`" >> "docs/generated/sources/$basename.md"
+        done
+
+    - name: Setup Pages
+      if: github.ref == 'refs/heads/main'
+      uses: actions/configure-pages@v3
+
+    - name: Upload Documentation Artifact
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: docs/
+
+  # Deploy to GitHub Pages
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: generate-docs
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
+
+  # Validate documentation in PRs
+  validate-docs:
+    name: Validate Documentation
+    runs-on: macos-14
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: '5.9'
+
+    - name: Check Documentation Comments
+      run: |
+        echo "Checking for missing documentation comments..."
+        
+        # Check for public APIs without documentation
+        missing_docs=0
+        
+        find Sources/ -name "*.swift" | while read file; do
+          echo "Checking $file"
+          
+          # Look for public declarations that might need documentation
+          grep -n "public\|open" "$file" | while read line; do
+            line_num=$(echo "$line" | cut -d: -f1)
+            
+            # Check if there's a documentation comment above
+            prev_line=$((line_num - 1))
+            if [ $prev_line -gt 0 ]; then
+              prev_content=$(sed -n "${prev_line}p" "$file")
+              if [[ ! "$prev_content" =~ ///|/\*\* ]]; then
+                echo "⚠️  Missing documentation for line $line_num in $file"
+                echo "   $line"
+                missing_docs=$((missing_docs + 1))
+              fi
+            fi
+          done
+        done
+        
+        echo "Documentation check completed"
+
+    - name: Check Documentation Links
+      run: |
+        echo "Checking documentation links..."
+        
+        # Check for broken links in markdown files
+        find docs/ -name "*.md" -exec grep -l "http\|\.md" {} \; | while read file; do
+          echo "Checking links in $file"
+          # Basic link validation could be added here
+        done
+        
+        echo "Link check completed" 

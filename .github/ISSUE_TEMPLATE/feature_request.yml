@@ -1,0 +1,172 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees:
+  - eladmoshe
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible to help us understand your request.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: ✨ Feature Summary
+      description: A brief summary of the feature you'd like to see
+      placeholder: Briefly describe the feature...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 🎯 Problem Statement
+      description: What problem does this feature solve? What is the motivation?
+      placeholder: |
+        Is your feature request related to a problem? Please describe.
+        A clear and concise description of what the problem is.
+        Ex. I'm always frustrated when [...]
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 💡 Proposed Solution
+      description: Describe the solution you'd like to see
+      placeholder: |
+        A clear and concise description of what you want to happen.
+        How should this feature work?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: 📂 Feature Category
+      description: Which category best describes this feature?
+      options:
+        - Text Processing/AI
+        - Keyboard Shortcuts
+        - User Interface
+        - System Integration
+        - Performance
+        - Configuration/Settings
+        - API Integration
+        - Security/Privacy
+        - Accessibility
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🔥 Priority Level
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would be helpful
+        - High - Important for my workflow
+        - Critical - Can't use the app effectively without it
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: components
+    attributes:
+      label: 🔧 Affected Components
+      description: Which parts of the app would this feature affect?
+      options:
+        - label: "Text processing engine"
+        - label: "Keyboard shortcut system"
+        - label: "Menu bar interface"
+        - label: "Screen capture functionality"
+        - label: "API integrations (Claude/OpenAI)"
+        - label: "Configuration system"
+        - label: "Build/deployment process"
+        - label: "Testing framework"
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 Alternatives Considered
+      description: What alternative solutions or features have you considered?
+      placeholder: |
+        Describe alternatives you've considered.
+        Are there workarounds you're currently using?
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: 📋 Use Cases & Examples
+      description: Provide specific use cases or examples of how this feature would be used
+      placeholder: |
+        Example scenarios:
+        1. When I select text in [app], I want to...
+        2. In my workflow, I often need to...
+        3. This would help me when...
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: 🎨 Mockups/Design Ideas
+      description: |
+        If you have UI mockups, sketches, or design ideas, please share them here.
+        You can drag and drop images directly into this text area.
+      placeholder: Describe any UI/UX ideas or attach mockups...
+
+  - type: checkboxes
+    id: implementation
+    attributes:
+      label: 🛠️ Implementation Considerations
+      description: Have you thought about implementation aspects?
+      options:
+        - label: "This might require new dependencies"
+        - label: "This could affect app performance"
+        - label: "This might need new system permissions"
+        - label: "This could impact existing functionality"
+        - label: "This would need extensive testing"
+        - label: "This is a breaking change"
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: 🤝 Contribution Interest
+      description: Would you be interested in contributing to this feature?
+      options:
+        - I'd like to implement this myself
+        - I can help with testing
+        - I can help with documentation
+        - I can provide feedback during development
+        - I prefer to just suggest the idea
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 📋 Additional Context
+      description: |
+        Add any other context, screenshots, or information about the feature request here.
+        - Related issues or discussions
+        - Similar features in other apps
+        - Technical constraints you're aware of
+        - Timeline considerations
+      placeholder: Any additional information...
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: ✅ Acknowledgments
+      description: By submitting this feature request, you agree to the following
+      options:
+        - label: "I have searched for existing issues and this is not a duplicate"
+          required: true
+        - label: "I understand this is open source software and features depend on contributor availability"
+          required: true
+        - label: "I have provided enough detail to understand and evaluate this request"
+          required: true 

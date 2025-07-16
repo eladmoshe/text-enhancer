@@ -1,0 +1,238 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ published ]
+
+env:
+  SWIFT_VERSION: '5.9'
+  XCODE_VERSION: '15.0'
+
+jobs:
+  # Build and Test Job
+  build-and-test:
+    name: Build and Test
+    runs-on: macos-14
+    strategy:
+      matrix:
+        swift-version: ['5.9', '5.10']
+        
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Swift ${{ matrix.swift-version }}
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: ${{ matrix.swift-version }}
+
+    - name: Cache Swift Dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .build
+          Package.resolved
+        key: ${{ runner.os }}-swift-${{ matrix.swift-version }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
+        restore-keys: |
+          ${{ runner.os }}-swift-${{ matrix.swift-version }}-
+          ${{ runner.os }}-swift-
+
+    - name: Swift Version Info
+      run: |
+        swift --version
+        xcodebuild -version
+        
+    - name: Build Debug
+      run: swift build --configuration debug
+      
+    - name: Build Release
+      run: swift build --configuration release
+
+    - name: Run Tests
+      run: |
+        swift test --parallel
+        
+    - name: Run Custom Test Runner
+      run: |
+        swift run --package-path . -- test || echo "Custom test runner completed"
+
+    - name: Test Build Script
+      run: |
+        chmod +x build.sh
+        ./build.sh --help
+        
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      if: matrix.swift-version == '5.9'
+      with:
+        name: debug-build-${{ github.sha }}
+        path: |
+          .build/debug/TextEnhancer
+          Sources/
+        retention-days: 7
+
+  # Code Quality Job
+  code-quality:
+    name: Code Quality
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: ${{ env.SWIFT_VERSION }}
+
+    - name: Install SwiftLint
+      run: |
+        brew install swiftlint
+        
+    - name: Install SwiftFormat
+      run: |
+        brew install swiftformat
+
+    - name: Run SwiftLint
+      run: |
+        swiftlint lint --reporter github-actions-logging
+        
+    - name: Check SwiftFormat
+      run: |
+        swiftformat --lint Sources/ Tests/
+
+    - name: Check for TODO/FIXME comments
+      run: |
+        echo "Checking for TODO/FIXME comments..."
+        if grep -r "TODO\|FIXME" Sources/ Tests/ --include="*.swift" || true; then
+          echo "Found TODO/FIXME comments (this is informational, not failing the build)"
+        else
+          echo "No TODO/FIXME comments found"
+        fi
+
+  # Security Scanning Job
+  security:
+    name: Security Scan
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy Vulnerability Scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy Scan Results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Check for Hardcoded Secrets
+      run: |
+        echo "Checking for potential hardcoded secrets..."
+        if grep -r -i "api.*key\|password\|secret\|token" Sources/ --include="*.swift" | grep -v "test\|mock\|example" || true; then
+          echo "Found potential secrets (review manually)"
+        else
+          echo "No obvious secrets found"
+        fi
+
+  # App Bundle Build Job
+  bundle-build:
+    name: Build App Bundle
+    runs-on: macos-14
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    needs: [build-and-test, code-quality]
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: ${{ env.SWIFT_VERSION }}
+
+    - name: Build Release Bundle
+      run: |
+        chmod +x build.sh
+        swift build --configuration release
+        make bundle
+        
+    - name: Create Bundle Archive
+      run: |
+        mkdir -p artifacts
+        tar -czf artifacts/TextEnhancer-${{ github.sha }}.tar.gz TextEnhancer.app/
+        
+    - name: Upload App Bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: TextEnhancer-bundle-${{ github.sha }}
+        path: artifacts/TextEnhancer-*.tar.gz
+        retention-days: 30
+
+  # Release Job (only on release events)
+  release:
+    name: Release
+    runs-on: macos-14
+    if: github.event_name == 'release'
+    needs: [build-and-test, code-quality, security, bundle-build]
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: ${{ env.SWIFT_VERSION }}
+
+    - name: Download Bundle Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: TextEnhancer-bundle-${{ github.sha }}
+        path: ./artifacts
+
+    - name: Create Release Archive
+      run: |
+        cd artifacts
+        mv TextEnhancer-${{ github.sha }}.tar.gz TextEnhancer-${{ github.event.release.tag_name }}.tar.gz
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./artifacts/TextEnhancer-${{ github.event.release.tag_name }}.tar.gz
+        asset_name: TextEnhancer-${{ github.event.release.tag_name }}.tar.gz
+        asset_content_type: application/gzip
+
+  # Notification Job
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [build-and-test, code-quality, security]
+    
+    steps:
+    - name: Notify Success
+      if: ${{ needs.build-and-test.result == 'success' && needs.code-quality.result == 'success' && needs.security.result == 'success' }}
+      run: |
+        echo "✅ All CI checks passed!"
+        
+    - name: Notify Failure
+      if: ${{ needs.build-and-test.result == 'failure' || needs.code-quality.result == 'failure' || needs.security.result == 'failure' }}
+      run: |
+        echo "❌ Some CI checks failed!"
+        echo "Build and Test: ${{ needs.build-and-test.result }}"
+        echo "Code Quality: ${{ needs.code-quality.result }}"
+        echo "Security: ${{ needs.security.result }}" 

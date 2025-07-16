@@ -1,0 +1,167 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees:
+  - eladmoshe
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the following information to help us understand and reproduce the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 🐛 Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: ✅ Expected Behavior
+      description: What did you expect to happen?
+      placeholder: Describe what you expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: ❌ Actual Behavior
+      description: What actually happened?
+      placeholder: Describe what actually happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 🔄 Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: macos-version
+    attributes:
+      label: 🍎 macOS Version
+      description: What version of macOS are you running?
+      options:
+        - macOS 14 (Sonoma)
+        - macOS 13 (Ventura)
+        - macOS 12 (Monterey)
+        - Other (please specify in additional context)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: app-version
+    attributes:
+      label: 📱 TextEnhancer Version
+      description: What version of TextEnhancer are you using?
+      options:
+        - Latest from main branch
+        - Latest release
+        - Custom build
+        - Unknown
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: shortcuts
+    attributes:
+      label: ⌨️ Affected Shortcuts
+      description: Which shortcuts are affected by this bug? (Check all that apply)
+      options:
+        - label: "⌃⌥1 - Improve Text"
+        - label: "⌃⌥4 - Summarize"
+        - label: "⌃⌥5 - Expand"
+        - label: "⌃⌥6 - Describe Screen"
+        - label: "⌃⌥7 - Analyze Screen (OpenAI)"
+        - label: "All shortcuts"
+        - label: "None (not shortcut-related)"
+
+  - type: checkboxes
+    id: permissions
+    attributes:
+      label: 🔐 Permissions Status
+      description: What is the status of your app permissions?
+      options:
+        - label: "Accessibility permissions granted"
+        - label: "Screen recording permissions granted"
+        - label: "Using signed app bundle"
+        - label: "Permissions reset after app restart"
+
+  - type: dropdown
+    id: api-provider
+    attributes:
+      label: 🤖 API Provider
+      description: Which API provider are you using?
+      options:
+        - Claude (Anthropic)
+        - OpenAI
+        - Both
+        - None configured
+        - Not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 📝 Logs/Error Messages
+      description: |
+        Include any relevant logs, error messages, or console output.
+        You can find logs by running the app in debug mode or checking Console.app.
+      placeholder: Paste logs here...
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 📋 Additional Context
+      description: |
+        Add any other context about the problem here.
+        - Screenshots
+        - System configuration
+        - Other apps running
+        - Network conditions
+        - Anything else that might be relevant
+      placeholder: Any additional information...
+
+  - type: checkboxes
+    id: troubleshooting
+    attributes:
+      label: 🔧 Troubleshooting Done
+      description: What troubleshooting steps have you already tried?
+      options:
+        - label: "Restarted the TextEnhancer app"
+        - label: "Checked accessibility permissions"
+        - label: "Checked screen recording permissions"
+        - label: "Tried different shortcuts"
+        - label: "Tested with different text selections"
+        - label: "Verified API key configuration"
+        - label: "Tried rebuilding the app"
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: ✅ Acknowledgments
+      description: By submitting this issue, you agree to the following
+      options:
+        - label: "I have searched for existing issues and this is not a duplicate"
+          required: true
+        - label: "I have provided enough information to reproduce the bug"
+          required: true
+        - label: "I understand this is open source software provided as-is"
+          required: true 
