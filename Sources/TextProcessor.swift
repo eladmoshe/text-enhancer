@@ -301,7 +301,7 @@ class TextProcessor: ObservableObject {
                 // Also write to debug file
                 try? debugMsg.appendingFormat("\n").write(to: URL(fileURLWithPath: "/Users/elad.moshe/my-code/text-llm-modify/debug.log"), atomically: true, encoding: .utf8)
                 
-                let isScreenshotOnly = (shortcut?.id == "describe-screen" || shortcut?.name == "Describe Screen")
+                let isScreenshotOnly = shortcut?.effectiveIncludeScreenshot ?? false
                 
                 print("🔧 TextProcessor: Is screenshot-only mode: \(isScreenshotOnly)")
                 print("🔧 TextProcessor: All shortcuts in config: \(configManager.configuration.shortcuts.map { "\($0.id):\($0.name)" })")
@@ -326,8 +326,7 @@ class TextProcessor: ObservableObject {
                 // Capture screenshot if enabled for this shortcut
                 var screenContext: String? = nil
                 if let shortcut = configManager.configuration.shortcuts.first(where: { $0.prompt == prompt }),
-                   shortcut.effectiveIncludeScreenshot,
-                   shortcut.effectiveProvider == .claude { // Only Claude supports vision
+                   shortcut.effectiveIncludeScreenshot {
                     
                     print("🔧 TextProcessor: Capturing screenshot for context")
                     if let screenshot = screenCaptureService.captureActiveScreen(),
