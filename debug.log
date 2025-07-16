@@ -1,7 +1,8 @@
-🔧 TextProcessor: Checking shortcut for prompt: 'Expand this text with more details, examples, and explanations while maintaining clarity.'
-🔧 TextProcessor: Available shortcuts:
-🔧   - ID: 'improve-text', Name: 'Improve Text', Prompt: 'Improve the writing quality and clarity of this text while maintaining its original meaning and tone.'
-🔧   - ID: 'summarize', Name: 'Summarize', Prompt: 'Provide a concise summary of this text, highlighting the main points.'
-🔧   - ID: 'expand', Name: 'Expand', Prompt: 'Expand this text with more details, examples, and explanations while maintaining clarity.'
-🔧   - ID: 'describe-screen', Name: 'Describe Screen', Prompt: 'Describe what you see in this screenshot. Explain what is happening on the screen, what applications are open, what content is visible, and any notable elements or activities.'
-🔧 TextProcessor: Found shortcut: expand, name: Expand, includeScreenshot: false
+2025-07-16 22:00:29.044 TextEnhancer[10041:2589134] 🔧 MenuBarManager: Setting up menu...
+2025-07-16 22:00:29.044 TextEnhancer[10041:2589134] 🔧 MenuBarManager: Added status item
+2025-07-16 22:00:29.044 TextEnhancer[10041:2589134] 🔧 MenuBarManager: Adding accessibility item...
+2025-07-16 22:00:29.044 TextEnhancer[10041:2589134] 🔧 MenuBarManager: Added accessibility item: '⚠️ Accessibility: Disabled (Click to enable)'
+2025-07-16 22:00:29.044 TextEnhancer[10041:2589134] 🔧 MenuBarManager: Adding screen recording item...
+2025-07-16 22:00:29.052 TextEnhancer[10041:2589134] 🔧 MenuBarManager: Added screen recording item: '⚠️ Screen Recording: Disabled (Click to enable)'
+2025-07-16 22:00:29.052 TextEnhancer[10041:2589134] 🔧 MenuBarManager: Menu setup complete! Total items: 15
+2025-07-16 22:00:29.053 TextEnhancer[10041:2589134] 🔧 MenuBarManager: Menu items: ["TextEnhancer", "", "⌃⌥1 - Improve Text", "⌃⌥4 - Summarize", "⌃⌥5 - Expand", "⌃⌥6 - Describe Screen", "⌃⌥7 - Analyze Screen (OpenAI)", "", "⚠️ Accessibility: Disabled (Click to enable)", "⚠️ Screen Recording: Disabled (Click to enable)", "", "Edit config.json to configure", "", "🔄 Force Restart App", "Quit TextEnhancer"]

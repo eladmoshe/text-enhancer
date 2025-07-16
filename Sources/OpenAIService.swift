@@ -18,13 +18,17 @@ class OpenAIService: ObservableObject {
     }
     
     func enhanceText(_ text: String, with prompt: String, screenContext: String?) async throws -> String {
-        // For now, check if OpenAI API key is configured in the claudeApiKey field
-        // TODO: Update configuration schema to support multiple API providers
-        guard let apiKey = configManager.claudeApiKey, !apiKey.isEmpty else {
+        print("🔧 OpenAIService: Enhancing text (\(text.count) characters)")
+        if screenContext != nil {
+            print("🔧 OpenAIService: Including screen context")
+        }
+        
+        guard let apiKey = configManager.openaiApiKey, !apiKey.isEmpty else {
+            print("❌ OpenAIService: API key missing or empty")
             throw OpenAIError.missingApiKey
         }
         
-        let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey)
+        let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey, screenContext: screenContext)
         
         let (data, response) = try await urlSession.data(for: request)
         
@@ -51,7 +55,7 @@ class OpenAIService: ObservableObject {
         }
     }
     
-    internal func createRequest(text: String, prompt: String, apiKey: String) throws -> URLRequest {
+    internal func createRequest(text: String, prompt: String, apiKey: String, screenContext: String? = nil) throws -> URLRequest {
         guard let url = URL(string: apiURL) else {
             throw OpenAIError.invalidURL
         }
@@ -61,30 +65,65 @@ class OpenAIService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = timeout
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         
-        let fullPrompt = """
-        \(prompt)
-        
-        Text to enhance:
-        \(text)
-        
-        Respond ONLY with valid JSON exactly matching this schema:
-        {
-            "enhancedText": "<improved text>"
+        let basePrompt: String
+        if text == "[Screenshot analysis requested]" {
+            // Screenshot-only mode
+            basePrompt = prompt
+        } else {
+            // Normal text enhancement mode
+            basePrompt = """
+            \(prompt)
+            
+            Text to enhance:
+            \(text)
+            """
         }
-        No additional keys, comments, markdown, or code fences.
+        
+        let jsonInstructions = """
+        
+        CRITICAL: You must respond with ONLY a valid JSON object. No explanations, no markdown, no code blocks, no additional text.
+        
+        Required JSON format:
+        {"enhancedText": "your enhanced text here"}
+        
+        Do not include any text before or after the JSON object.
         """
         
-        let requestBody = OpenAIRequest(
-            model: defaultModel,
-            messages: [
-                OpenAIMessage(role: "user", content: fullPrompt)
-            ],
-            max_tokens: maxTokens,
-            temperature: 0.7
-        )
+        let textPrompt = basePrompt + jsonInstructions
         
-        request.httpBody = try JSONEncoder().encode(requestBody)
+        if let screenContext = screenContext {
+            // Create multimodal message with screen context for vision-capable models
+            let model = "gpt-4-vision-preview" // Use vision model for screenshots
+            let messageContent = [
+                OpenAIMessageContent(type: "image_url", image_url: OpenAIImageURL(url: "data:image/jpeg;base64,\(screenContext)")),
+                OpenAIMessageContent(type: "text", text: textPrompt)
+            ]
+            
+            let requestBody = OpenAIRequestMultimodal(
+                model: model,
+                messages: [
+                    OpenAIMessageMultimodal(role: "user", content: messageContent)
+                ],
+                max_tokens: maxTokens,
+                temperature: 0.7
+            )
+            
+            request.httpBody = try JSONEncoder().encode(requestBody)
+        } else {
+            // Use the simple text-only format for backward compatibility
+            let requestBody = OpenAIRequest(
+                model: defaultModel,
+                messages: [
+                    OpenAIMessage(role: "user", content: textPrompt)
+                ],
+                max_tokens: maxTokens,
+                temperature: 0.7
+            )
+            
+            request.httpBody = try JSONEncoder().encode(requestBody)
+        }
         
         return request
     }
@@ -102,6 +141,42 @@ struct OpenAIRequest: Codable {
 struct OpenAIMessage: Codable {
     let role: String
     let content: String
+}
+
+// MARK: - Multimodal Request Models
+
+struct OpenAIRequestMultimodal: Codable {
+    let model: String
+    let messages: [OpenAIMessageMultimodal]
+    let max_tokens: Int
+    let temperature: Double
+}
+
+struct OpenAIMessageMultimodal: Codable {
+    let role: String
+    let content: [OpenAIMessageContent]
+}
+
+struct OpenAIMessageContent: Codable {
+    let type: String
+    let text: String?
+    let image_url: OpenAIImageURL?
+    
+    init(type: String, text: String) {
+        self.type = type
+        self.text = text
+        self.image_url = nil
+    }
+    
+    init(type: String, image_url: OpenAIImageURL) {
+        self.type = type
+        self.text = nil
+        self.image_url = image_url
+    }
+}
+
+struct OpenAIImageURL: Codable {
+    let url: String
 }
 
 struct OpenAIResponse: Codable {
