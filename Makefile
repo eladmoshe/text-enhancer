@@ -3,7 +3,7 @@
 .PHONY: build run clean debug release install help bundle bundle-signed install-location
 
 # Configuration
-INSTALL_PATH = ~/Applications/TextEnhancer.app
+INSTALL_PATH = $(HOME)/Applications/TextEnhancer.app
 BUNDLE_NAME = TextEnhancer.app
 
 # Default target
@@ -183,6 +183,7 @@ install-signed: bundle-signed
 	@echo "✅ Signed TextEnhancer installed to $(INSTALL_PATH)"
 	@echo "🎯 Launch from $(INSTALL_PATH) for persistent accessibility permissions!"
 
+
 # Show install location
 install-location:
 	@echo "📍 TextEnhancer install location: $(INSTALL_PATH)"
@@ -230,15 +231,15 @@ help:
 	@echo "TextEnhancer Build System"
 	@echo ""
 	@echo "🏗️  Build targets:"
-	@echo "  build         - Build the application (debug)"
-	@echo "  release       - Build the application (release)"
-	@echo "  bundle        - Create unsigned app bundle"
-	@echo "  bundle-signed - Create signed app bundle (persistent permissions)"
+	@echo "  build         - Build the application (debug, non-bundled)"
+	@echo "  release       - Build the application (release, non-bundled)"
+	@echo "  bundle        - Create unsigned app bundle (production)"
+	@echo "  bundle-signed - Create signed app bundle (production, persistent permissions)"
 	@echo ""
 	@echo "🚀 Run targets:"
-	@echo "  run           - Build and run debug version"
-	@echo "  run-release   - Build and run release version"
-	@echo "  run-bundle    - Install and run app bundle"
+	@echo "  run           - Build and run debug version (non-bundled, development)"
+	@echo "  run-release   - Build and run release version (non-bundled)"
+	@echo "  run-bundle    - Install and run app bundle (bundled, production)"
 	@echo "  settings      - Open settings window directly"
 	@echo ""
 	@echo "📦 Install targets:"

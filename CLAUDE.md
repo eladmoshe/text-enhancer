@@ -9,22 +9,30 @@ TextEnhancer is a native macOS application that captures selected text, enhances
 ## Best Practices
 
 - Markdown files that document the app structure and behavior should be in the docs folder
+- **Use bundled versions (--bundle or --bundle-signed) as much as possible** for persistent permissions
+- **Use non-bundled version (--run) only for active development** when you need immediate code changes
 
 ## Build Commands
 
 ### Primary Build Commands
+
+**Production (Bundled - Use for final testing and release):**
 ```bash
-# Build and run as app bundle (RECOMMENDED)
-./build.sh --bundle
-
-# Build and run debug executable
-./build.sh --run
-
-# Release build
-swift build -c release
-make bundle
-open TextEnhancer.app
+./build.sh --bundle-signed   # Signed bundle (persistent permissions) - RECOMMENDED
+./build.sh --bundle          # Unsigned bundle (permissions reset on rebuild)
 ```
+
+**Development (Non-bundled - Use for active development):**
+```bash
+./build.sh --run             # Debug binary (no bundle, permissions reset every time)
+```
+
+**🎯 Key Rule: Use bundled versions (--bundle or --bundle-signed) as much as possible for persistent permissions!**
+
+**🔍 Visual Indicators:**
+- **🔧 Wrench icon**: Development (non-bundled) version without permissions
+- **⚠️ Triangle icon**: Production (bundled) version without permissions  
+- **✨ Stars icon**: Either version with permissions granted
 
 ### Testing
 ```bash
@@ -59,16 +67,16 @@ make help          # Show all make targets
 
 ### Debugging and Development Notes
 
-**CRITICAL: Always use debug binary for development**
-When making code changes, the app bundle may not pick up changes due to caching. For development:
+**CRITICAL: Use the right version for the right purpose**
+- **Development (Non-bundled)**: Use `./build.sh --run` for immediate code changes - picks up changes instantly, but permissions reset every time
+- **Production (Bundled)**: Use `./build.sh --bundle` or `./build.sh --bundle-signed` for testing with persistent permissions
 
 ```bash
-# For immediate code changes during development
-.build/debug/TextEnhancer &   # Run debug binary directly
+# Development workflow (for active coding)
+./build.sh --run              # Debug binary (no bundle, permissions reset every time)
 
-# For testing with permissions (slower but official)
-./build.sh --run              # Debug version (no persistent permissions)
-./build.sh --bundle           # Unsigned bundle (permissions reset)
+# Production workflow (for testing with permissions)
+./build.sh --bundle           # Unsigned bundle (permissions reset on rebuild)
 ./build.sh --bundle-signed    # Signed bundle (persistent permissions)
 ```
 
