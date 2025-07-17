@@ -144,10 +144,10 @@ bundle-signed: release
 	cp Info.plist $(BUNDLE_NAME)/Contents/Info.plist
 	echo "APPL????" > $(BUNDLE_NAME)/Contents/PkgInfo
 	@echo "🔏 Signing app bundle..."
-	codesign --force --deep --timestamp --options runtime \
+	codesign --force --deep --options runtime \
 		--entitlements TextEnhancer.entitlements \
 		--sign "$(SIGN_ID)" $(BUNDLE_NAME)/Contents/MacOS/TextEnhancer
-	codesign --force --deep --timestamp --options runtime \
+	codesign --force --deep --options runtime \
 		--sign "$(SIGN_ID)" $(BUNDLE_NAME)
 	@echo "✅ Signed app bundle created: $(BUNDLE_NAME)"
 	@echo "🎯 Accessibility permissions will now persist across rebuilds!"

@@ -2,27 +2,42 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Enable App Sandbox -->
-    <key>com.apple.security.app-sandbox</key>
-    <true/>
-
-    <!-- Outgoing network connections for API calls -->
+    <!-- Keychain access for secure API key storage -->
+    <key>keychain-access-groups</key>
+    <array>
+        <string>$(AppIdentifierPrefix)com.textenhancer.keychain</string>
+    </array>
+    
+    <!-- Network access for API calls -->
     <key>com.apple.security.network.client</key>
     <true/>
-
-    <!-- Accessibility access for reading/modifying text in other apps -->
+    
+    <!-- Accessibility access for text capture -->
     <key>com.apple.security.automation.apple-events</key>
     <true/>
     
-    <!-- Allow interaction with accessibility APIs -->
-    <key>com.apple.security.temporary-exception.apple-events</key>
-    <array>
-        <string>com.apple.systemuiserver</string>
-        <string>com.apple.finder</string>
-    </array>
-
-    <!-- Application identifier to satisfy designated requirement -->
-    <key>com.apple.application-identifier</key>
-    <string>KU9XZ7ZW5P.com.lemonadeinc.textenhancer</string>
+    <!-- Hardened runtime -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <false/>
+    
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <false/>
+    
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <false/>
+    
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <false/>
+    
+    <!-- Required for global keyboard shortcuts -->
+    <key>com.apple.security.device.audio-input</key>
+    <false/>
+    
+    <key>com.apple.security.device.camera</key>
+    <false/>
+    
+    <!-- Required for screen capture -->
+    <key>com.apple.security.device.capture</key>
+    <true/>
 </dict>
 </plist> 
