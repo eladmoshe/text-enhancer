@@ -25,6 +25,7 @@ class MenuBarManagerTests: XCTestCase {
                     modifiers: [.control, .option],
                     prompt: "Improve this text",
                     provider: .claude,
+                    model: "claude-4-sonnet",
                     includeScreenshot: false
                 )
             ],
@@ -41,11 +42,11 @@ class MenuBarManagerTests: XCTestCase {
         )
         
         let configData = try JSONEncoder().encode(testConfig)
-        try configData.write(to: tempDir.configFile())
+        try tempDir.createAppSupportDirectory()
+        try configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         // Initialize managers
         configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         textProcessor = TextProcessor(configManager: configManager)

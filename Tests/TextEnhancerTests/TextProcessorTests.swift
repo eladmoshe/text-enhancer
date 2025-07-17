@@ -99,10 +99,10 @@ final class TextProcessorTests: XCTestCase {
         )
         
         let configData = try! JSONEncoder().encode(config)
-        try! configData.write(to: tempDir.configFile())
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
@@ -195,10 +195,9 @@ final class TextProcessorTests: XCTestCase {
         )
         
         let configData = try! JSONEncoder().encode(configWithoutKey)
-        try! configData.write(to: tempDir.configFile())
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         let configManagerWithoutKey = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         

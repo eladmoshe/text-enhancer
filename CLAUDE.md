@@ -1,0 +1,1 @@
+- Markdown docs should go to the docs/ folder

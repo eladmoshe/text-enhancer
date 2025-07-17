@@ -41,10 +41,10 @@ final class OpenAIServiceTests: XCTestCase {
         )
         
         let configData = try! JSONEncoder().encode(config)
-        try! configData.write(to: tempDir.configFile())
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         return ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
     }
@@ -85,7 +85,7 @@ final class OpenAIServiceTests: XCTestCase {
         let service = OpenAIService(configManager: configManager, urlSession: mockURLSession)
         
         // When: Enhance text
-        let result = try await service.enhanceText("Test text", with: "Test prompt")
+        let result = try await service.enhanceText("Test text", with: "Test prompt", using: "gpt-4o")
         
         // Then: Should return enhanced text
         XCTAssertEqual(result, "Enhanced text content")
@@ -98,7 +98,7 @@ final class OpenAIServiceTests: XCTestCase {
         
         // When: Try to enhance text
         do {
-            _ = try await service.enhanceText("Test text", with: "Test prompt")
+            _ = try await service.enhanceText("Test text", with: "Test prompt", using: "gpt-4o")
             XCTFail("Should have thrown missingApiKey error")
         } catch OpenAIError.missingApiKey {
             // Then: Should throw missing API key error
@@ -122,7 +122,7 @@ final class OpenAIServiceTests: XCTestCase {
         
         // When: Try to enhance text
         do {
-            _ = try await service.enhanceText("Test text", with: "Test prompt")
+            _ = try await service.enhanceText("Test text", with: "Test prompt", using: "gpt-4o")
             XCTFail("Should have thrown apiError")
         } catch OpenAIError.apiError(let statusCode, _) {
             // Then: Should throw API error with correct status code
@@ -146,7 +146,7 @@ final class OpenAIServiceTests: XCTestCase {
         
         // When: Try to enhance text
         do {
-            _ = try await service.enhanceText("Test text", with: "Test prompt")
+            _ = try await service.enhanceText("Test text", with: "Test prompt", using: "gpt-4o")
             XCTFail("Should have thrown an error")
         } catch {
             // Then: Should throw some error (JSON decoding will fail)
@@ -178,7 +178,7 @@ final class OpenAIServiceTests: XCTestCase {
         
         // When: Try to enhance text
         do {
-            _ = try await service.enhanceText("Test text", with: "Test prompt")
+            _ = try await service.enhanceText("Test text", with: "Test prompt", using: "gpt-4o")
             XCTFail("Should have thrown noContent error")
         } catch OpenAIError.noContent {
             // Then: Should throw no content error
@@ -194,7 +194,7 @@ final class OpenAIServiceTests: XCTestCase {
         let service = OpenAIService(configManager: configManager)
         
         // When: Create request
-        let request = try service.createRequest(text: "Test text", prompt: "Test prompt", apiKey: "test-key")
+        let request = try service.createRequest(text: "Test text", prompt: "Test prompt", apiKey: "test-key", model: "gpt-4o")
         
         // Then: Should set correct headers
         XCTAssertEqual(request.url?.absoluteString, "https://api.openai.com/v1/chat/completions")
@@ -210,13 +210,13 @@ final class OpenAIServiceTests: XCTestCase {
         let service = OpenAIService(configManager: configManager)
         
         // When: Create request
-        let request = try service.createRequest(text: "Test text", prompt: "Test prompt", apiKey: "test-key")
+        let request = try service.createRequest(text: "Test text", prompt: "Test prompt", apiKey: "test-key", model: "gpt-4o")
         
         // Then: Should set correct body
         XCTAssertNotNil(request.httpBody)
         
         let requestBody = try JSONDecoder().decode(OpenAIRequest.self, from: request.httpBody!)
-        XCTAssertEqual(requestBody.model, "gpt-3.5-turbo")
+        XCTAssertEqual(requestBody.model, "gpt-4o")
         XCTAssertEqual(requestBody.max_tokens, 1000)
         XCTAssertEqual(requestBody.temperature, 0.7)
         XCTAssertEqual(requestBody.messages.count, 1)

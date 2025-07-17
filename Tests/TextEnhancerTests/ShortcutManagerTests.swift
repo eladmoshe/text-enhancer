@@ -22,6 +22,7 @@ final class ShortcutManagerTests: XCTestCase {
                     modifiers: [.control, .option],
                     prompt: "Improve the writing quality and clarity of this text.",
                     provider: .claude,
+                    model: "claude-4-sonnet",
                     includeScreenshot: false
                 ),
                 ShortcutConfiguration(
@@ -31,6 +32,7 @@ final class ShortcutManagerTests: XCTestCase {
                     modifiers: [.control, .option],
                     prompt: "Rewrite this text in a formal tone.",
                     provider: .claude,
+                    model: "claude-4-opus",
                     includeScreenshot: false
                 ),
                 ShortcutConfiguration(
@@ -40,6 +42,7 @@ final class ShortcutManagerTests: XCTestCase {
                     modifiers: [.control, .option],
                     prompt: "Provide a concise summary of this text.",
                     provider: .claude,
+                    model: "claude-4-sonnet",
                     includeScreenshot: false
                 )
             ],
@@ -56,10 +59,10 @@ final class ShortcutManagerTests: XCTestCase {
         )
         
         let configData = try! JSONEncoder().encode(testConfig)
-        try! configData.write(to: tempDir.configFile())
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
@@ -91,6 +94,7 @@ final class ShortcutManagerTests: XCTestCase {
                     modifiers: [.control, .option],
                     prompt: "First prompt",
                     provider: .claude,
+                    model: "claude-4-sonnet",
                     includeScreenshot: false
                 ),
                 ShortcutConfiguration(
@@ -100,6 +104,7 @@ final class ShortcutManagerTests: XCTestCase {
                     modifiers: [.control, .option], // Same modifiers
                     prompt: "Second prompt",
                     provider: .claude,
+                    model: "claude-4-opus",
                     includeScreenshot: false
                 )
             ],
@@ -116,10 +121,10 @@ final class ShortcutManagerTests: XCTestCase {
         )
         
         let configData = try! JSONEncoder().encode(conflictingConfig)
-        try! configData.write(to: tempDir.configFile())
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         let conflictingConfigManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
@@ -148,10 +153,10 @@ final class ShortcutManagerTests: XCTestCase {
         )
         
         let configData = try! JSONEncoder().encode(emptyConfig)
-        try! configData.write(to: tempDir.configFile())
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         let emptyConfigManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         

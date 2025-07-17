@@ -17,7 +17,6 @@ final class ConfigurationManagerTests: XCTestCase {
     func test_loadsDefaultWhenNoFileExists() {
         // Given: No config file exists
         let configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
@@ -31,12 +30,12 @@ final class ConfigurationManagerTests: XCTestCase {
         XCTAssertEqual(configManager.configuration.logLevel, "info")
         XCTAssertEqual(configManager.configuration.shortcuts.count, 1)
         XCTAssertEqual(configManager.configuration.shortcuts.first?.id, "improve-text")
+        XCTAssertEqual(configManager.configuration.shortcuts.first?.model, "claude-4-sonnet")
     }
     
     func test_claudeApiKeyReturnsNilWhenEmpty() {
         // Given: Configuration with empty API key
         let configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
@@ -55,16 +54,16 @@ final class ConfigurationManagerTests: XCTestCase {
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders(
-                claude: APIProviderConfig(apiKey: "test-api-key", model: "claude-3-haiku-20240307", enabled: true),
-                openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
+                claude: APIProviderConfig(apiKey: "test-api-key", model: "claude-4-sonnet", enabled: true),
+                openai: APIProviderConfig(apiKey: "", model: "gpt-4o", enabled: false)
             )
         )
         
         let configData = try! JSONEncoder().encode(config)
-        try! configData.write(to: tempDir.configFile())
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         let configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
@@ -75,7 +74,6 @@ final class ConfigurationManagerTests: XCTestCase {
     func test_saveAndLoadConfiguration() {
         // Given: Configuration manager
         let configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
@@ -89,6 +87,7 @@ final class ConfigurationManagerTests: XCTestCase {
                     modifiers: [.command, .shift],
                     prompt: "Test prompt",
                     provider: .claude,
+                    model: "claude-4-opus",
                     includeScreenshot: false
                 )
             ],
@@ -99,15 +98,14 @@ final class ConfigurationManagerTests: XCTestCase {
             autoSave: false,
             logLevel: "debug",
             apiProviders: APIProviders(
-                claude: APIProviderConfig(apiKey: "modified-key", model: "claude-3-haiku-20240307", enabled: true),
-                openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
+                claude: APIProviderConfig(apiKey: "modified-key", model: "claude-4-sonnet", enabled: true),
+                openai: APIProviderConfig(apiKey: "", model: "gpt-4o", enabled: false)
             )
         )
         
         configManager.saveConfiguration(modifiedConfig)
         
         let newConfigManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
@@ -116,13 +114,14 @@ final class ConfigurationManagerTests: XCTestCase {
         XCTAssertEqual(newConfigManager.configuration.timeout, 60.0)
         XCTAssertEqual(newConfigManager.configuration.shortcuts.count, 1)
         XCTAssertEqual(newConfigManager.configuration.shortcuts.first?.id, "test-shortcut")
+        XCTAssertEqual(newConfigManager.configuration.shortcuts.first?.model, "claude-4-opus")
     }
     
-    func test_loadConfigurationFromFallbackLocation() {
-        // Given: Fallback configuration file
+    func test_loadConfigurationFromAppSupportDirectory() {
+        // Given: Configuration file in app support directory
         try! tempDir.createAppSupportDirectory()
         
-        let fallbackConfig = AppConfiguration(
+        let config = AppConfiguration(
             shortcuts: [],
             maxTokens: 1500,
             timeout: 45.0,
@@ -131,78 +130,28 @@ final class ConfigurationManagerTests: XCTestCase {
             autoSave: true,
             logLevel: "warn",
             apiProviders: APIProviders(
-                claude: APIProviderConfig(apiKey: "fallback-key", model: "claude-3-haiku-20240307", enabled: true),
-                openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
+                claude: APIProviderConfig(apiKey: "app-support-key", model: "claude-4-sonnet", enabled: true),
+                openai: APIProviderConfig(apiKey: "", model: "gpt-4o", enabled: false)
             )
         )
         
-        let fallbackConfigData = try! JSONEncoder().encode(fallbackConfig)
-        try! fallbackConfigData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
+        let configData = try! JSONEncoder().encode(config)
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         let configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
-        // Then: Should load fallback configuration
-        XCTAssertEqual(configManager.configuration.apiProviders.claude.apiKey, "fallback-key")
+        // Then: Should load configuration from app support directory
+        XCTAssertEqual(configManager.configuration.apiProviders.claude.apiKey, "app-support-key")
         XCTAssertEqual(configManager.configuration.maxTokens, 1500)
         XCTAssertEqual(configManager.configuration.timeout, 45.0)
-    }
-    
-    func test_localConfigurationTakesPrecedenceOverFallback() {
-        // Given: Both local and fallback configuration files exist
-        try! tempDir.createAppSupportDirectory()
-        
-        let localConfig = AppConfiguration(
-            shortcuts: [],
-            maxTokens: 1000,
-            timeout: 30.0,
-            showStatusIcon: true,
-            enableNotifications: true,
-            autoSave: true,
-            logLevel: "info",
-            apiProviders: APIProviders(
-                claude: APIProviderConfig(apiKey: "local-key", model: "claude-3-haiku-20240307", enabled: true),
-                openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
-            )
-        )
-        
-        let fallbackConfig = AppConfiguration(
-            shortcuts: [],
-            maxTokens: 1500,
-            timeout: 45.0,
-            showStatusIcon: true,
-            enableNotifications: true,
-            autoSave: true,
-            logLevel: "warn",
-            apiProviders: APIProviders(
-                claude: APIProviderConfig(apiKey: "fallback-key", model: "claude-3-haiku-20240307", enabled: true),
-                openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
-            )
-        )
-        
-        let localConfigData = try! JSONEncoder().encode(localConfig)
-        let fallbackConfigData = try! JSONEncoder().encode(fallbackConfig)
-        
-        try! localConfigData.write(to: tempDir.configFile())
-        try! fallbackConfigData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
-        
-        let configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
-            appSupportDir: tempDir.appSupportDirectory()
-        )
-        
-        // Then: Should load local configuration
-        XCTAssertEqual(configManager.configuration.apiProviders.claude.apiKey, "local-key")
-        XCTAssertEqual(configManager.configuration.maxTokens, 1000)
-        XCTAssertEqual(configManager.configuration.logLevel, "info")
     }
     
     func test_fallsBackToDefaultWhenNoConfigurationFound() {
         // Given: No configuration files exist
         let configManager = ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
         
@@ -210,5 +159,6 @@ final class ConfigurationManagerTests: XCTestCase {
         XCTAssertEqual(configManager.configuration.apiProviders.claude.apiKey, "")
         XCTAssertEqual(configManager.configuration.maxTokens, 1000)
         XCTAssertEqual(configManager.configuration.shortcuts.count, 1)
+        XCTAssertEqual(configManager.configuration.shortcuts.first?.model, "claude-4-sonnet")
     }
 } 

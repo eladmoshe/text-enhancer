@@ -161,14 +161,9 @@ install: bundle-signed
 		rm -rf "$(INSTALL_PATH)"; \
 	fi
 	cp -R $(BUNDLE_NAME) "$(INSTALL_PATH)"
-	@echo "📄 Copying local config.json to app support directory..."
+	@echo "📁 Ensuring app support directory exists..."
 	@mkdir -p ~/Library/Application\ Support/TextEnhancer/
-	@if [ -f "config.json" ]; then \
-		cp config.json ~/Library/Application\ Support/TextEnhancer/config.json; \
-		echo "✅ Local config.json copied to app support directory"; \
-	else \
-		echo "⚠️  No local config.json found - using existing config"; \
-	fi
+	@echo "✅ App support directory ready"
 	@echo "✅ TextEnhancer installed to $(INSTALL_PATH)"
 
 # Install signed app bundle to Applications folder
@@ -180,14 +175,9 @@ install-signed: bundle-signed
 		rm -rf "$(INSTALL_PATH)"; \
 	fi
 	cp -R $(BUNDLE_NAME) "$(INSTALL_PATH)"
-	@echo "📄 Copying local config.json to app support directory..."
+	@echo "📁 Ensuring app support directory exists..."
 	@mkdir -p ~/Library/Application\ Support/TextEnhancer/
-	@if [ -f "config.json" ]; then \
-		cp config.json ~/Library/Application\ Support/TextEnhancer/config.json; \
-		echo "✅ Local config.json copied to app support directory"; \
-	else \
-		echo "⚠️  No local config.json found - using existing config"; \
-	fi
+	@echo "✅ App support directory ready"
 	@echo "✅ Signed TextEnhancer installed to $(INSTALL_PATH)"
 	@echo "🎯 Launch from $(INSTALL_PATH) for persistent accessibility permissions!"
 

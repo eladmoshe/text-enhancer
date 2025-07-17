@@ -35,16 +35,16 @@ final class ClaudeServiceTests: XCTestCase {
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders(
-                claude: APIProviderConfig(apiKey: apiKey, model: "claude-3-haiku-20240307", enabled: true),
-                openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
+                claude: APIProviderConfig(apiKey: apiKey, model: "claude-4-sonnet", enabled: true),
+                openai: APIProviderConfig(apiKey: "", model: "gpt-4o", enabled: false)
             )
         )
         
         let configData = try! JSONEncoder().encode(config)
-        try! configData.write(to: tempDir.configFile())
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
         
         return ConfigurationManager(
-            localConfig: tempDir.configFile(),
             appSupportDir: tempDir.appSupportDirectory()
         )
     }
@@ -76,7 +76,7 @@ final class ClaudeServiceTests: XCTestCase {
         }
         
         // When: Enhance text
-        let result = try await claudeService.enhanceText("Hello world", with: "Test prompt")
+        let result = try await claudeService.enhanceText("Hello world", with: "Test prompt", using: "claude-4-sonnet")
         
         // Then: Should return enhanced text
         XCTAssertEqual(result, "Enhanced text")
@@ -89,7 +89,7 @@ final class ClaudeServiceTests: XCTestCase {
         
         // When: Try to enhance text
         do {
-            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
+            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt", using: "claude-4-sonnet")
             XCTFail("Should have thrown missingApiKey error")
         } catch ClaudeError.missingApiKey {
             // Then: Should throw missing API key error
@@ -118,7 +118,7 @@ final class ClaudeServiceTests: XCTestCase {
         
         // When: Try to enhance text
         do {
-            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
+            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt", using: "claude-4-sonnet")
             XCTFail("Should have thrown apiError")
         } catch ClaudeError.apiError(let statusCode, _) {
             // Then: Should throw API error
@@ -147,7 +147,7 @@ final class ClaudeServiceTests: XCTestCase {
         
         // When: Try to enhance text
         do {
-            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
+            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt", using: "claude-4-sonnet")
             XCTFail("Should have thrown invalidResponse error")
         } catch {
             // Then: Should throw some error (JSON decoding will fail)
@@ -183,7 +183,7 @@ final class ClaudeServiceTests: XCTestCase {
         
         // When: Try to enhance text
         do {
-            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt")
+            _ = try await claudeService.enhanceText("Hello world", with: "Test prompt", using: "claude-4-sonnet")
             XCTFail("Should have thrown noContent error")
         } catch ClaudeError.noContent {
             // Then: Should throw no content error
@@ -199,7 +199,7 @@ final class ClaudeServiceTests: XCTestCase {
         let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
         
         // When: Create request
-        let request = try claudeService.createRequest(text: "Hello world", prompt: "Improve this", apiKey: "test-key")
+        let request = try claudeService.createRequest(text: "Hello world", prompt: "Improve this", apiKey: "test-key", model: "claude-4-sonnet")
         
         // Then: Should have correct headers
         XCTAssertEqual(request.url?.absoluteString, "https://api.anthropic.com/v1/messages")
@@ -216,13 +216,13 @@ final class ClaudeServiceTests: XCTestCase {
         let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
         
         // When: Create request
-        let request = try claudeService.createRequest(text: "Hello world", prompt: "Improve this", apiKey: "test-key")
+        let request = try claudeService.createRequest(text: "Hello world", prompt: "Improve this", apiKey: "test-key", model: "claude-4-sonnet")
         
         // Then: Should have correct body
         XCTAssertNotNil(request.httpBody)
         
         let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
-        XCTAssertEqual(body["model"] as? String, "claude-3-haiku-20240307")
+        XCTAssertEqual(body["model"] as? String, "claude-4-sonnet")
         XCTAssertEqual(body["max_tokens"] as? Int, 1000)
         
         let messages = body["messages"] as! [[String: Any]]

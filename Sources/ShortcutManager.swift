@@ -10,6 +10,14 @@ class ShortcutManager: ObservableObject {
     init(textProcessor: TextProcessor, configManager: ConfigurationManager) {
         self.textProcessor = textProcessor
         self.configManager = configManager
+        
+        // Listen for configuration changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(configurationChanged),
+            name: .configurationChanged,
+            object: nil
+        )
     }
     
     func registerShortcuts() {
@@ -163,11 +171,17 @@ class ShortcutManager: ObservableObject {
         }
     }
     
+    @objc private func configurationChanged() {
+        print("🔄 ShortcutManager: Configuration changed, re-registering shortcuts")
+        registerShortcuts()
+    }
+    
     deinit {
         unregisterAllShortcuts()
         if let eventHandler = eventHandler {
             RemoveEventHandler(eventHandler)
         }
+        NotificationCenter.default.removeObserver(self)
     }
 }
 

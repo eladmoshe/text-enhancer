@@ -4,8 +4,7 @@ import Carbon
 class ConfigurationManager: ObservableObject {
     @Published var configuration: AppConfiguration = .default
     
-    private let localConfigFile: URL
-    private let fallbackConfigFile: URL
+    private let configFile: URL
     
     var claudeApiKey: String? {
         guard configuration.apiProviders.claude.enabled,
@@ -50,9 +49,7 @@ class ConfigurationManager: ObservableObject {
         }
     }
     
-    init(localConfig: URL = URL(fileURLWithPath: "config.json"), appSupportDir: URL? = nil) {
-        self.localConfigFile = localConfig
-        
+    init(appSupportDir: URL? = nil) {
         let configDirectory: URL
         if let appSupportDir = appSupportDir {
             configDirectory = appSupportDir
@@ -61,7 +58,10 @@ class ConfigurationManager: ObservableObject {
             configDirectory = appSupport.appendingPathComponent("TextEnhancer")
         }
         
-        self.fallbackConfigFile = configDirectory.appendingPathComponent("config.json")
+        self.configFile = configDirectory.appendingPathComponent("config.json")
+        
+        // Ensure the config directory exists
+        try? FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
         
         loadConfiguration()
     }
@@ -75,8 +75,8 @@ class ConfigurationManager: ObservableObject {
             let encoder = JSONEncoder()
             encoder.outputFormatting = .prettyPrinted
             let data = try encoder.encode(config)
-            try data.write(to: localConfigFile)
-            print("✅ Configuration saved to config.json")
+            try data.write(to: configFile)
+            print("✅ Configuration saved to: \(configFile.path)")
             
             // Update the published configuration
             DispatchQueue.main.async {
@@ -92,40 +92,27 @@ class ConfigurationManager: ObservableObject {
     
     func loadConfiguration() {
         print("🔧 ConfigurationManager: Loading configuration...")
-        print("🔧 ConfigurationManager: Looking for local config at: \(localConfigFile.path)")
-        print("🔧 ConfigurationManager: Looking for fallback config at: \(fallbackConfigFile.path)")
+        print("🔧 ConfigurationManager: Looking for config at: \(configFile.path)")
         
-        // First try to load from local config.json
-        if FileManager.default.fileExists(atPath: localConfigFile.path) {
+        // Try to load from Application Support directory
+        if FileManager.default.fileExists(atPath: configFile.path) {
             do {
-                let data = try Data(contentsOf: localConfigFile)
+                let data = try Data(contentsOf: configFile)
                 self.configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
-                print("✅ Configuration loaded from config.json")
+                print("✅ Configuration loaded from: \(configFile.path)")
                 print("🔧 ConfigurationManager: Loaded \(configuration.shortcuts.count) shortcuts")
                 return
             } catch {
-                print("❌ Failed to load local configuration: \(error)")
+                print("❌ Failed to load configuration: \(error)")
             }
         } else {
-            print("🔧 ConfigurationManager: Local config file does not exist")
+            print("🔧 ConfigurationManager: Config file does not exist, using defaults")
         }
         
-        // Fallback to app support directory
-        if FileManager.default.fileExists(atPath: fallbackConfigFile.path) {
-            do {
-                let data = try Data(contentsOf: fallbackConfigFile)
-                self.configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
-                print("✅ Configuration loaded from app support directory")
-                print("🔧 ConfigurationManager: Loaded \(configuration.shortcuts.count) shortcuts from fallback")
-                return
-            } catch {
-                print("❌ Failed to load fallback configuration: \(error)")
-            }
-        }
-        
-        // Use default configuration
+        // Use default configuration and save it
         configuration = AppConfiguration.default
         print("ℹ️  Using default configuration with \(configuration.shortcuts.count) shortcuts")
+        saveConfiguration(configuration)
     }
 }
 
