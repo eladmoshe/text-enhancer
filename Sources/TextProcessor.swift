@@ -145,8 +145,8 @@ class DefaultAlertPresenter: AlertPresenter {
 // MARK: - API Provider Protocol
 
 protocol APIProviderService {
-    func enhanceText(_ text: String, with prompt: String) async throws -> String
-    func enhanceText(_ text: String, with prompt: String, screenContext: String?) async throws -> String
+    func enhanceText(_ text: String, with prompt: String, using model: String) async throws -> String
+    func enhanceText(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String
 }
 
 // MARK: - API Provider Factory
@@ -207,12 +207,13 @@ class TextProcessor: ObservableObject {
         let shortcut = configManager.configuration.shortcuts.first { $0.prompt == prompt }
         print("🔧 TextProcessor: Found shortcut: \(shortcut?.id ?? "none") for prompt: '\(prompt)'")
         let provider = shortcut?.effectiveProvider ?? .claude
+        let model = shortcut?.effectiveModel ?? "claude-4-sonnet"
         
-        await processSelectedText(with: prompt, using: provider)
+        await processSelectedText(with: prompt, using: provider, model: model)
     }
     
-    func processSelectedText(with prompt: String, using provider: APIProvider) async {
-        print("🔧 TextProcessor: Starting text processing with provider: \(provider)")
+    func processSelectedText(with prompt: String, using provider: APIProvider, model: String) async {
+        print("🔧 TextProcessor: Starting text processing with provider: \(provider) and model: \(model)")
         
         // Notify that processing has started
         NotificationCenter.default.post(name: .textProcessingStarted, object: nil)
@@ -346,9 +347,9 @@ class TextProcessor: ObservableObject {
                 let enhancedText: String
                 if let screenContext = screenContext,
                    let claudeService = apiService as? ClaudeService {
-                    enhancedText = try await claudeService.enhanceText(selectedText, with: prompt, screenContext: screenContext)
+                    enhancedText = try await claudeService.enhanceText(selectedText, with: prompt, using: model, screenContext: screenContext)
                 } else {
-                    enhancedText = try await apiService.enhanceText(selectedText, with: prompt)
+                    enhancedText = try await apiService.enhanceText(selectedText, with: prompt, using: model)
                 }
                 
                 // Replace selected text (or insert at cursor for screenshot-only mode)

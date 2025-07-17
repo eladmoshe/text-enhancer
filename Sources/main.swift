@@ -10,6 +10,16 @@ struct TextEnhancerApp: App {
         Settings {
             EmptyView()
         }
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings...") {
+                    if let configManager = appDelegate.configManager {
+                        SettingsWindowManager.shared.showSettings(configManager: configManager)
+                    }
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
     }
 }
 

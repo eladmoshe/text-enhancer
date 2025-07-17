@@ -4,7 +4,6 @@ class ClaudeService: ObservableObject {
     private let configManager: ConfigurationManager
     private let urlSession: URLSession
     private let apiURL = "https://api.anthropic.com/v1/messages"
-    private let modelName = "claude-3-haiku-20240307"
     private let maxTokens = 1000
     private let timeout: TimeInterval = 30.0
     
@@ -20,11 +19,11 @@ class ClaudeService: ObservableObject {
         self.urlSession = urlSession == .shared ? URLSession(configuration: configuration) : urlSession
     }
     
-    func enhanceText(_ text: String, with prompt: String) async throws -> String {
-        return try await enhanceText(text, with: prompt, screenContext: nil)
+    func enhanceText(_ text: String, with prompt: String, using model: String) async throws -> String {
+        return try await enhanceText(text, with: prompt, using: model, screenContext: nil)
     }
     
-    func enhanceText(_ text: String, with prompt: String, screenContext: String?) async throws -> String {
+    func enhanceText(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
         print("🔧 ClaudeService: Enhancing text (\(text.count) characters)")
         if screenContext != nil {
             print("🔧 ClaudeService: Including screen context")
@@ -35,7 +34,7 @@ class ClaudeService: ObservableObject {
             throw ClaudeError.missingApiKey
         }
         
-        let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey, screenContext: screenContext)
+        let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey, model: model, screenContext: screenContext)
         
         let (data, response) = try await urlSession.data(for: request)
         
@@ -79,7 +78,7 @@ class ClaudeService: ObservableObject {
         }
     }
     
-    internal func createRequest(text: String, prompt: String, apiKey: String, screenContext: String? = nil) throws -> URLRequest {
+    internal func createRequest(text: String, prompt: String, apiKey: String, model: String, screenContext: String? = nil) throws -> URLRequest {
         guard let url = URL(string: apiURL) else {
             throw ClaudeError.invalidURL
         }
@@ -134,7 +133,7 @@ class ClaudeService: ObservableObject {
             ]
             
             let requestBody = ClaudeRequestMultimodal(
-                model: modelName,
+                model: model,
                 max_tokens: maxTokens,
                 messages: [
                     ClaudeMessageMultimodal(role: "user", content: messageContent)
@@ -145,7 +144,7 @@ class ClaudeService: ObservableObject {
         } else {
             // Use the simple text-only format for backward compatibility
             let requestBody = ClaudeRequest(
-                model: modelName,
+                model: model,
                 max_tokens: maxTokens,
                 messages: [
                     ClaudeMessage(role: "user", content: textPrompt)

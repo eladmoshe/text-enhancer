@@ -4,7 +4,6 @@ class OpenAIService: ObservableObject {
     private let configManager: ConfigurationManager
     private let urlSession: URLSession
     private let apiURL = "https://api.openai.com/v1/chat/completions"
-    private let defaultModel = "gpt-3.5-turbo"
     private let maxTokens = 1000
     private let timeout: TimeInterval = 30.0
     
@@ -13,11 +12,11 @@ class OpenAIService: ObservableObject {
         self.urlSession = urlSession
     }
     
-    func enhanceText(_ text: String, with prompt: String) async throws -> String {
-        return try await enhanceText(text, with: prompt, screenContext: nil)
+    func enhanceText(_ text: String, with prompt: String, using model: String) async throws -> String {
+        return try await enhanceText(text, with: prompt, using: model, screenContext: nil)
     }
     
-    func enhanceText(_ text: String, with prompt: String, screenContext: String?) async throws -> String {
+    func enhanceText(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
         print("🔧 OpenAIService: Enhancing text (\(text.count) characters)")
         if screenContext != nil {
             print("🔧 OpenAIService: Including screen context")
@@ -28,7 +27,7 @@ class OpenAIService: ObservableObject {
             throw OpenAIError.missingApiKey
         }
         
-        let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey, screenContext: screenContext)
+        let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey, model: model, screenContext: screenContext)
         
         let (data, response) = try await urlSession.data(for: request)
         
@@ -63,7 +62,7 @@ class OpenAIService: ObservableObject {
         }
     }
     
-    internal func createRequest(text: String, prompt: String, apiKey: String, screenContext: String? = nil) throws -> URLRequest {
+    internal func createRequest(text: String, prompt: String, apiKey: String, model: String, screenContext: String? = nil) throws -> URLRequest {
         guard let url = URL(string: apiURL) else {
             throw OpenAIError.invalidURL
         }
@@ -111,14 +110,14 @@ class OpenAIService: ObservableObject {
         
         if let screenContext = screenContext {
             // Create multimodal message with screen context for vision-capable models
-            let model = "gpt-4-vision-preview" // Use vision model for screenshots
+            let visionModel = model.contains("gpt-4") ? "gpt-4-vision-preview" : "gpt-4-vision-preview" // Use vision model for screenshots
             let messageContent = [
                 OpenAIMessageContent(type: "image_url", image_url: OpenAIImageURL(url: "data:image/jpeg;base64,\(screenContext)")),
                 OpenAIMessageContent(type: "text", text: textPrompt)
             ]
             
             let requestBody = OpenAIRequestMultimodal(
-                model: model,
+                model: visionModel,
                 messages: [
                     OpenAIMessageMultimodal(role: "user", content: messageContent)
                 ],
@@ -130,7 +129,7 @@ class OpenAIService: ObservableObject {
         } else {
             // Use the simple text-only format for backward compatibility
             let requestBody = OpenAIRequest(
-                model: defaultModel,
+                model: model,
                 messages: [
                     OpenAIMessage(role: "user", content: textPrompt)
                 ],

@@ -45,6 +45,14 @@ class MenuBarManager: ObservableObject {
         
         // Start periodic permission checking
         startPermissionMonitoring()
+        
+        // Listen for configuration changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(configurationChanged),
+            name: .configurationChanged,
+            object: nil
+        )
     }
     
     func setupMenu(for statusItem: NSStatusItem) {
@@ -114,10 +122,10 @@ class MenuBarManager: ObservableObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        // Configuration info
-        let configItem = NSMenuItem(title: "Edit config.json to configure", action: nil, keyEquivalent: "")
-        configItem.isEnabled = false
-        menu.addItem(configItem)
+        // Settings
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -364,6 +372,17 @@ class MenuBarManager: ObservableObject {
             
         } catch {
             print("❌ Failed to create restart script: \(error)")
+        }
+    }
+    
+    @objc private func openSettings() {
+        SettingsWindowManager.shared.showSettings(configManager: configManager)
+    }
+    
+    @objc private func configurationChanged() {
+        print("🔄 MenuBarManager: Configuration changed, refreshing menu")
+        DispatchQueue.main.async {
+            self.refreshMenu()
         }
     }
     

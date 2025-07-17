@@ -77,6 +77,14 @@ class ConfigurationManager: ObservableObject {
             let data = try encoder.encode(config)
             try data.write(to: localConfigFile)
             print("✅ Configuration saved to config.json")
+            
+            // Update the published configuration
+            DispatchQueue.main.async {
+                self.configuration = config
+            }
+            
+            // Post notification for configuration change
+            NotificationCenter.default.post(name: .configurationChanged, object: nil)
         } catch {
             print("❌ Failed to save configuration: \(error)")
         }
@@ -142,6 +150,7 @@ struct AppConfiguration: Codable {
                 modifiers: [.control, .option],
                 prompt: "Improve the writing quality and clarity of this text while maintaining its original meaning and tone.",
                 provider: .claude,
+                model: "claude-4-sonnet",
                 includeScreenshot: nil
             )
         ],
@@ -155,17 +164,22 @@ struct AppConfiguration: Codable {
     )
 }
 
-struct ShortcutConfiguration: Codable {
+struct ShortcutConfiguration: Codable, Identifiable {
     let id: String
     let name: String
     let keyCode: Int
     let modifiers: [ModifierKey]
     let prompt: String
     let provider: APIProvider
+    let model: String
     let includeScreenshot: Bool?
     
     var effectiveProvider: APIProvider {
         return provider
+    }
+    
+    var effectiveModel: String {
+        return model
     }
     
     var effectiveIncludeScreenshot: Bool {
@@ -182,12 +196,12 @@ struct APIProviders: Codable {
     static let `default` = APIProviders(
         claude: APIProviderConfig(
             apiKey: "",
-            model: "claude-3-haiku-20240307",
+            model: "claude-4-sonnet",
             enabled: true
         ),
         openai: APIProviderConfig(
             apiKey: "",
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o",
             enabled: false
         )
     )
@@ -242,4 +256,9 @@ enum ModifierKey: String, Codable, CaseIterable {
             return "⇧"
         }
     }
+}
+
+// Notification names
+extension Notification.Name {
+    static let configurationChanged = Notification.Name("configurationChanged")
 } 
