@@ -10,8 +10,19 @@
     <key>com.apple.security.network.client</key>
     <true/>
 
+    <!-- Accessibility access for reading/modifying text in other apps -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+    
+    <!-- Allow interaction with accessibility APIs -->
+    <key>com.apple.security.temporary-exception.apple-events</key>
+    <array>
+        <string>com.apple.systemuiserver</string>
+        <string>com.apple.finder</string>
+    </array>
+
     <!-- Application identifier to satisfy designated requirement -->
     <key>com.apple.application-identifier</key>
-    <string>KU9XZ7ZW5P.com.textenhancer.app</string>
+    <string>KU9XZ7ZW5P.com.lemonadeinc.textenhancer</string>
 </dict>
 </plist> 

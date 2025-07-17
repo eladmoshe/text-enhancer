@@ -61,6 +61,10 @@ class MenuBarManager: ObservableObject {
         
         let menu = NSMenu()
         
+        // Force a fresh permission check every time the menu is set up
+        // This ensures we get current permission status
+        forcePermissionRefresh()
+        
         // Status item
         let statusMenuItem = NSMenuItem(title: "TextEnhancer", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
@@ -88,7 +92,7 @@ class MenuBarManager: ObservableObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        // Accessibility permission status
+        // Accessibility permission status - always get fresh status
         NSLog("🔧 MenuBarManager: Adding accessibility item...")
         let accessibilityStatus = AXIsProcessTrusted()
         let accessibilityItem = NSMenuItem(
@@ -101,7 +105,7 @@ class MenuBarManager: ObservableObject {
         menu.addItem(accessibilityItem)
         NSLog("🔧 MenuBarManager: Added accessibility item: '\(accessibilityItem.title)'")
 
-        // Screen recording permission status - simplified approach
+        // Screen recording permission status - always get fresh status
         NSLog("🔧 MenuBarManager: Adding screen recording item...")
         let screenRecordingStatus: Bool
         if #available(macOS 10.15, *) {
@@ -171,6 +175,31 @@ class MenuBarManager: ObservableObject {
                 self.refreshMenu()
             }
         }
+    }
+    
+    private func forcePermissionRefresh() {
+        // Force update the permission status by simulating a change
+        let currentStatus = AXIsProcessTrusted()
+        let previousStatus = lastAccessibilityStatus
+        
+        print("🔄 Force refreshing permission status...")
+        print("   Current accessibility status: \(currentStatus)")
+        print("   Last known status: \(previousStatus)")
+        
+        // Update our internal state
+        lastAccessibilityStatus = currentStatus
+        
+        // Update the status icon
+        updateStatusIcon()
+        
+        // Also check screen recording for completeness
+        let screenRecordingStatus: Bool
+        if #available(macOS 10.15, *) {
+            screenRecordingStatus = CGPreflightScreenCaptureAccess()
+        } else {
+            screenRecordingStatus = true
+        }
+        print("   Current screen recording status: \(screenRecordingStatus)")
     }
     
     
