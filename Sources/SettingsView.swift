@@ -254,9 +254,26 @@ struct ShortcutRowView: View {
                 
                 HStack(spacing: 8) {
                     // Provider and model tag
-                    HStack(spacing: 4) {
+                    let providerTextColor: Color = {
+                        switch shortcut.provider {
+                        case .claude:
+                            return .orange
+                        case .openai:
+                            return .black
+                        }
+                    }()
+                    let providerBackground: Color = {
+                        switch shortcut.provider {
+                        case .claude:
+                            return .orange.opacity(0.1)
+                        case .openai:
+                            return .clear // Use clear to avoid unwanted background color
+                        }
+                    }()
+
+                    let tagContent = HStack(spacing: 4) {
                         Circle()
-                            .fill(shortcut.provider == .claude ? Color.orange : Color.green)
+                            .fill(providerTextColor)
                             .frame(width: 6, height: 6)
                         Text(shortcut.provider.displayName)
                             .font(.caption)
@@ -270,9 +287,22 @@ struct ShortcutRowView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(shortcut.provider == .claude ? Color.orange.opacity(0.1) : Color.green.opacity(0.1))
-                    .foregroundColor(shortcut.provider == .claude ? Color.orange : Color.green)
-                    .cornerRadius(10)
+
+                    if shortcut.provider == .openai {
+                        tagContent
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.gray.opacity(0.5), lineWidth: 0.5)
+                            )
+                    } else {
+                        tagContent
+                            .background(providerBackground)
+                            .foregroundColor(providerTextColor)
+                            .cornerRadius(10)
+                    }
                     
                     if shortcut.effectiveIncludeScreenshot {
                         HStack(spacing: 4) {
