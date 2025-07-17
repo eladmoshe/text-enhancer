@@ -36,11 +36,6 @@ struct SettingsView: View {
                     .font(.title)
                     .fontWeight(.semibold)
                 Spacer()
-                Button("Save") {
-                    saveConfiguration()
-                }
-                .buttonStyle(.borderedProminent)
-                .font(.body)
             }
             .padding()
             .background(Color(.controlBackgroundColor))
@@ -71,7 +66,10 @@ struct SettingsView: View {
                                     ShortcutRowView(
                                         shortcut: shortcut,
                                         onEdit: { editingShortcut = shortcut },
-                                        onDelete: { deleteShortcut(shortcut) }
+                                        onDelete: {
+                                            deleteShortcut(shortcut)
+                                            saveConfiguration()
+                                        }
                                     )
                                 }
                             }
@@ -88,6 +86,7 @@ struct SettingsView: View {
                                     Toggle("Enable Claude", isOn: $claudeEnabled)
                                         .toggleStyle(.switch)
                                         .font(.subheadline)
+                                        .onChange(of: claudeEnabled) { _ in saveConfiguration() }
                                     Spacer()
                                 }
                                 
@@ -100,6 +99,7 @@ struct SettingsView: View {
                                             SecureField("Enter Claude API key", text: $claudeApiKey)
                                                 .textFieldStyle(.roundedBorder)
                                                 .font(.subheadline)
+                                                .onChange(of: claudeApiKey) { _ in saveConfiguration() }
                                         }
                                     }
                                     .padding(.leading, 20)
@@ -114,6 +114,7 @@ struct SettingsView: View {
                                     Toggle("Enable OpenAI", isOn: $openaiEnabled)
                                         .toggleStyle(.switch)
                                         .font(.subheadline)
+                                        .onChange(of: openaiEnabled) { _ in saveConfiguration() }
                                     Spacer()
                                 }
                                 
@@ -126,6 +127,7 @@ struct SettingsView: View {
                                             SecureField("Enter OpenAI API key", text: $openaiApiKey)
                                                 .textFieldStyle(.roundedBorder)
                                                 .font(.subheadline)
+                                                .onChange(of: openaiApiKey) { _ in saveConfiguration() }
                                         }
                                     }
                                     .padding(.leading, 20)
@@ -146,6 +148,7 @@ struct SettingsView: View {
                                     .textFieldStyle(.roundedBorder)
                                     .frame(width: 80)
                                     .font(.subheadline)
+                                    .onChange(of: maxTokens) { _ in saveConfiguration() }
                                 Spacer()
                             }
                             
@@ -157,6 +160,7 @@ struct SettingsView: View {
                                     .textFieldStyle(.roundedBorder)
                                     .frame(width: 80)
                                     .font(.subheadline)
+                                    .onChange(of: timeout) { _ in saveConfiguration() }
                                 Text("seconds")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
@@ -165,8 +169,10 @@ struct SettingsView: View {
                             
                             Toggle("Show Status Icon", isOn: $showStatusIcon)
                                 .font(.subheadline)
+                                .onChange(of: showStatusIcon) { _ in saveConfiguration() }
                             Toggle("Enable Notifications", isOn: $enableNotifications)
                                 .font(.subheadline)
+                                .onChange(of: enableNotifications) { _ in saveConfiguration() }
                         }
                         .padding(.vertical, 4)
                     }
@@ -180,6 +186,7 @@ struct SettingsView: View {
                 shortcut: nil,
                 onSave: { newShortcut in
                     shortcuts.append(newShortcut)
+                    saveConfiguration()
                     showingAddShortcut = false
                 },
                 onCancel: { showingAddShortcut = false }
@@ -191,6 +198,7 @@ struct SettingsView: View {
                 onSave: { editedShortcut in
                     if let index = shortcuts.firstIndex(where: { $0.id == shortcut.id }) {
                         shortcuts[index] = editedShortcut
+                        saveConfiguration()
                     }
                     editingShortcut = nil
                 },
