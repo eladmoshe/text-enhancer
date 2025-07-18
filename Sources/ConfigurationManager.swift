@@ -137,7 +137,7 @@ struct AppConfiguration: Codable {
                 modifiers: [.control, .option],
                 prompt: "Improve the writing quality and clarity of this text while maintaining its original meaning and tone.",
                 provider: .claude,
-                model: "claude-4-sonnet",
+                model: "claude-3-5-sonnet-20241022",
                 includeScreenshot: nil
             )
         ],

@@ -13,6 +13,12 @@ struct SettingsView: View {
     @State private var openaiApiKey: String
     @State private var claudeEnabled: Bool
     @State private var openaiEnabled: Bool
+    @State private var testText: String = ""
+    @State private var selectedShortcutId: String? = nil
+    @State private var testResult: String = ""
+    @State private var isTestingInProgress: Bool = false
+    @State private var isClaudeKeyLocked: Bool = false
+    @State private var isOpenaiKeyLocked: Bool = false
     
     init(configManager: ConfigurationManager) {
         self.configManager = configManager
@@ -26,6 +32,8 @@ struct SettingsView: View {
         self._openaiApiKey = State(initialValue: config.apiProviders.openai.apiKey)
         self._claudeEnabled = State(initialValue: config.apiProviders.claude.enabled)
         self._openaiEnabled = State(initialValue: config.apiProviders.openai.enabled)
+        self._isClaudeKeyLocked = State(initialValue: !config.apiProviders.claude.apiKey.isEmpty)
+        self._isOpenaiKeyLocked = State(initialValue: !config.apiProviders.openai.apiKey.isEmpty)
     }
     
     var body: some View {
@@ -96,10 +104,41 @@ struct SettingsView: View {
                                             Text("API Key:")
                                                 .font(.subheadline)
                                                 .frame(width: 80, alignment: .leading)
-                                            SecureField("Enter Claude API key", text: $claudeApiKey)
-                                                .textFieldStyle(.roundedBorder)
-                                                .font(.subheadline)
-                                                .onChange(of: claudeApiKey) { _ in saveConfiguration() }
+                                            
+                                            if isClaudeKeyLocked {
+                                                SecureField("API key is set", text: .constant("••••••••••••••••"))
+                                                    .textFieldStyle(.roundedBorder)
+                                                    .font(.subheadline)
+                                                    .disabled(true)
+                                            } else {
+                                                SecureField("Enter Claude API key", text: $claudeApiKey)
+                                                    .textFieldStyle(.roundedBorder)
+                                                    .font(.subheadline)
+                                                    .onChange(of: claudeApiKey) { _ in 
+                                                        saveConfiguration()
+                                                        if !claudeApiKey.isEmpty {
+                                                            isClaudeKeyLocked = true
+                                                        } else {
+                                                            isClaudeKeyLocked = false
+                                                        }
+                                                    }
+                                            }
+                                            
+                                            Button(action: {
+                                                if isClaudeKeyLocked {
+                                                    isClaudeKeyLocked = false
+                                                } else {
+                                                    if !claudeApiKey.isEmpty {
+                                                        isClaudeKeyLocked = true
+                                                    }
+                                                }
+                                            }) {
+                                                Image(systemName: isClaudeKeyLocked ? "lock.fill" : "lock.open.fill")
+                                                    .foregroundColor(isClaudeKeyLocked ? .orange : .secondary)
+                                                    .font(.system(size: 14))
+                                            }
+                                            .buttonStyle(.plain)
+                                            .help(isClaudeKeyLocked ? "Click to unlock and edit API key" : "Click to lock API key")
                                         }
                                     }
                                     .padding(.leading, 20)
@@ -124,13 +163,138 @@ struct SettingsView: View {
                                             Text("API Key:")
                                                 .font(.subheadline)
                                                 .frame(width: 80, alignment: .leading)
-                                            SecureField("Enter OpenAI API key", text: $openaiApiKey)
-                                                .textFieldStyle(.roundedBorder)
-                                                .font(.subheadline)
-                                                .onChange(of: openaiApiKey) { _ in saveConfiguration() }
+                                            
+                                            if isOpenaiKeyLocked {
+                                                SecureField("API key is set", text: .constant("••••••••••••••••"))
+                                                    .textFieldStyle(.roundedBorder)
+                                                    .font(.subheadline)
+                                                    .disabled(true)
+                                            } else {
+                                                SecureField("Enter OpenAI API key", text: $openaiApiKey)
+                                                    .textFieldStyle(.roundedBorder)
+                                                    .font(.subheadline)
+                                                    .onChange(of: openaiApiKey) { _ in 
+                                                        saveConfiguration()
+                                                        if !openaiApiKey.isEmpty {
+                                                            isOpenaiKeyLocked = true
+                                                        } else {
+                                                            isOpenaiKeyLocked = false
+                                                        }
+                                                    }
+                                            }
+                                            
+                                            Button(action: {
+                                                if isOpenaiKeyLocked {
+                                                    isOpenaiKeyLocked = false
+                                                } else {
+                                                    if !openaiApiKey.isEmpty {
+                                                        isOpenaiKeyLocked = true
+                                                    }
+                                                }
+                                            }) {
+                                                Image(systemName: isOpenaiKeyLocked ? "lock.fill" : "lock.open.fill")
+                                                    .foregroundColor(isOpenaiKeyLocked ? .green : .secondary)
+                                                    .font(.system(size: 14))
+                                            }
+                                            .buttonStyle(.plain)
+                                            .help(isOpenaiKeyLocked ? "Click to unlock and edit API key" : "Click to lock API key")
                                         }
                                     }
                                     .padding(.leading, 20)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    
+                    // Test Prompt Section
+                    GroupBox("Test Prompt") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Test your configured shortcuts without switching to external applications")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Test Text:")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                TextEditor(text: $testText)
+                                    .frame(minHeight: 60)
+                                    .font(.system(.body, design: .monospaced))
+                                    .border(Color(.separatorColor), width: 1)
+                                    .cornerRadius(4)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Select Shortcut to Test:")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                if shortcuts.isEmpty {
+                                    Text("No shortcuts configured")
+                                        .foregroundColor(.secondary)
+                                        .italic()
+                                } else {
+                                    Picker("Shortcut", selection: $selectedShortcutId) {
+                                        Text("Select a shortcut...").tag(nil as String?)
+                                        ForEach(shortcuts, id: \.id) { shortcut in
+                                            Text("\(shortcut.name) (\(shortcut.provider.displayName))")
+                                                .tag(shortcut.id as String?)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                }
+                            }
+                            
+                            if let selectedShortcutId = selectedShortcutId,
+                               let selectedShortcut = shortcuts.first(where: { $0.id == selectedShortcutId }) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Prompt Preview:")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    Text(selectedShortcut.prompt)
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                        .padding(8)
+                                        .background(Color(.controlBackgroundColor))
+                                        .cornerRadius(4)
+                                        .lineLimit(3)
+                                }
+                            }
+                            
+                            HStack {
+                                Button("Test") {
+                                    Task {
+                                        await testPrompt()
+                                    }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(testText.isEmpty || selectedShortcutId == nil || isTestingInProgress)
+                                
+                                if isTestingInProgress {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .padding(.leading, 8)
+                                }
+                                
+                                Spacer()
+                            }
+                            
+                            if !testResult.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Result:")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    ScrollView {
+                                        Text(testResult)
+                                            .font(.system(.body, design: .monospaced))
+                                            .textSelection(.enabled)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    .frame(maxHeight: 150)
+                                    .border(Color(.separatorColor), width: 1)
+                                    .cornerRadius(4)
+                                    .background(Color(.controlBackgroundColor))
                                 }
                             }
                         }
@@ -207,6 +371,38 @@ struct SettingsView: View {
         }
     }
     
+    private func testPrompt() async {
+        guard !testText.isEmpty, 
+              let selectedShortcutId = selectedShortcutId,
+              let selectedShortcut = shortcuts.first(where: { $0.id == selectedShortcutId }) else { return }
+        
+        isTestingInProgress = true
+        testResult = ""
+        
+        defer {
+            isTestingInProgress = false
+        }
+        
+        do {
+            guard let apiService = APIProviderFactory.createService(for: selectedShortcut.provider, configManager: configManager) else {
+                await MainActor.run {
+                    testResult = "Error: API provider \(selectedShortcut.provider.displayName) is not configured or enabled."
+                }
+                return
+            }
+            
+            let enhancedText = try await apiService.enhanceText(testText, with: selectedShortcut.prompt, using: selectedShortcut.model)
+            
+            await MainActor.run {
+                testResult = enhancedText
+            }
+        } catch {
+            await MainActor.run {
+                testResult = "Error: \(error.localizedDescription)"
+            }
+        }
+    }
+    
     private func deleteShortcut(_ shortcut: ShortcutConfiguration) {
         shortcuts.removeAll { $0.id == shortcut.id }
     }
@@ -223,7 +419,7 @@ struct SettingsView: View {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(
                     apiKey: claudeApiKey,
-                    model: "claude-4-sonnet", // Default model for global config
+                    model: "claude-3-5-sonnet-20241022", // Default model for global config
                     enabled: claudeEnabled
                 ),
                 openai: APIProviderConfig(
@@ -362,8 +558,8 @@ struct ShortcutRowView: View {
     
     private func formatModelName(_ model: String) -> String {
         switch model {
-        case "claude-4-sonnet": return "Sonnet"
-        case "claude-4-opus": return "Opus"
+        case "claude-3-5-sonnet-20241022": return "Sonnet"
+        case "claude-opus-4-20250514": return "Opus"
         case "gpt-4o": return "4o"
         case "gpt-4o-mini": return "4o mini"
         case "gpt-4-turbo": return "4 Turbo"
@@ -410,6 +606,9 @@ struct ShortcutEditView: View {
     @State private var includeScreenshot: Bool
     @State private var selectedModifiers: Set<ModifierKey>
     @State private var selectedKeyCode: Int
+    @State private var availableClaudeModels: [ClaudeModel] = []
+    @State private var availableOpenAIModels: [OpenAIModel] = []
+    @State private var isLoadingModels: Bool = false
     
     init(shortcut: ShortcutConfiguration?, onSave: @escaping (ShortcutConfiguration) -> Void, onCancel: @escaping () -> Void) {
         self.shortcut = shortcut
@@ -428,7 +627,7 @@ struct ShortcutEditView: View {
             self._name = State(initialValue: "")
             self._prompt = State(initialValue: "")
             self._provider = State(initialValue: .claude)
-            self._model = State(initialValue: "claude-4-sonnet")
+            self._model = State(initialValue: "claude-3-5-sonnet-20241022")
             self._includeScreenshot = State(initialValue: false)
             self._selectedModifiers = State(initialValue: [.control, .option])
             self._selectedKeyCode = State(initialValue: 18)
@@ -479,25 +678,48 @@ struct ShortcutEditView: View {
                                 .pickerStyle(.segmented)
                                 .onChange(of: provider) { newProvider in
                                     // Update model to default for the new provider
-                                    model = newProvider == .claude ? "claude-4-sonnet" : "gpt-4o"
+                                    model = newProvider == .claude ? "claude-3-5-sonnet-20241022" : "gpt-4o"
+                                    
+                                    // Fetch models when provider changes
+                                    Task {
+                                        await fetchModels()
+                                    }
                                 }
                             }
                             
                             HStack {
                                 Text("Model:")
                                     .frame(width: 80, alignment: .leading)
-                                Picker("Model", selection: $model) {
-                                    if provider == .claude {
-                                        Text("Claude 4 Sonnet").tag("claude-4-sonnet")
-                                        Text("Claude 4 Opus").tag("claude-4-opus")
-                                    } else {
-                                        Text("GPT-4o").tag("gpt-4o")
-                                        Text("GPT-4o mini").tag("gpt-4o-mini")
-                                        Text("GPT-4 Turbo").tag("gpt-4-turbo")
-                                        Text("GPT-4").tag("gpt-4")
-                                        Text("GPT-3.5 Turbo").tag("gpt-3.5-turbo")
-                                        Text("o1-preview").tag("o1-preview")
-                                        Text("o1-mini").tag("o1-mini")
+                                HStack {
+                                    Picker("Model", selection: $model) {
+                                        if provider == .claude {
+                                            if availableClaudeModels.isEmpty {
+                                                Text("Loading models...").tag("")
+                                            } else {
+                                                ForEach(availableClaudeModels) { claudeModel in
+                                                    Text(claudeModel.displayName).tag(claudeModel.id)
+                                                }
+                                            }
+                                        } else {
+                                            if availableOpenAIModels.isEmpty {
+                                                Text("Loading models...").tag("")
+                                            } else {
+                                                ForEach(availableOpenAIModels) { openAIModel in
+                                                    Text(openAIModel.displayName).tag(openAIModel.id)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .disabled((provider == .claude && availableClaudeModels.isEmpty) || (provider == .openai && availableOpenAIModels.isEmpty))
+                                    
+                                    if (provider == .claude && (isLoadingModels || availableClaudeModels.isEmpty)) || (provider == .openai && (isLoadingModels || availableOpenAIModels.isEmpty)) {
+                                        Button("🔄") {
+                                            Task {
+                                                await fetchModels()
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                        .help("Refresh \(provider.displayName) models")
                                     }
                                 }
                                 .pickerStyle(.menu)
@@ -577,6 +799,11 @@ struct ShortcutEditView: View {
             }
         }
         .frame(minWidth: 500, minHeight: 400)
+        .onAppear {
+            Task {
+                await fetchModels()
+            }
+        }
     }
     
     private func saveShortcut() {
@@ -592,6 +819,66 @@ struct ShortcutEditView: View {
             includeScreenshot: includeScreenshot
         )
         onSave(newShortcut)
+    }
+    
+    @MainActor
+    private func fetchModels() async {
+        switch provider {
+        case .claude:
+            await fetchClaudeModels()
+        case .openai:
+            await fetchOpenAIModels()
+        }
+    }
+    
+    @MainActor
+    private func fetchClaudeModels() async {
+        isLoadingModels = true
+        
+        do {
+            // Create a temporary config manager for API calls
+            let tempConfigManager = ConfigurationManager()
+            let claudeService = ClaudeService(configManager: tempConfigManager)
+            let models = try await claudeService.fetchAvailableModels()
+            availableClaudeModels = models
+            
+            // Update the selected model if it's not available in the new list
+            if !models.contains(where: { $0.id == model }) && !models.isEmpty {
+                model = models.first?.id ?? model
+            }
+            
+            print("✅ ShortcutEditView: Loaded \(models.count) Claude models")
+        } catch {
+            print("❌ ShortcutEditView: Failed to fetch Claude models: \(error)")
+            // Keep existing models if fetch fails
+        }
+        
+        isLoadingModels = false
+    }
+    
+    @MainActor
+    private func fetchOpenAIModels() async {
+        isLoadingModels = true
+        
+        do {
+            // Create a temporary config manager for API calls
+            let tempConfigManager = ConfigurationManager()
+            let openAIService = OpenAIService(configManager: tempConfigManager)
+            let models = try await openAIService.fetchAvailableModels()
+            availableOpenAIModels = models
+            
+            // Update the selected model if it's not available in the new list
+            if !models.contains(where: { $0.id == model }) && !models.isEmpty {
+                model = models.first?.id ?? model
+            }
+            
+            print("✅ ShortcutEditView: Loaded \(models.count) OpenAI models")
+        } catch {
+            print("❌ ShortcutEditView: Failed to fetch OpenAI models: \(error)")
+            // Keep existing models if fetch fails
+        }
+        
+        isLoadingModels = false
     }
     
     private func formatShortcutDisplay(_ modifiers: [ModifierKey], _ keyCode: Int) -> String {

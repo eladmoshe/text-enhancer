@@ -4,6 +4,7 @@ class ClaudeService: ObservableObject {
     private let configManager: ConfigurationManager
     private let urlSession: URLSession
     private let apiURL = "https://api.anthropic.com/v1/messages"
+    private let modelsURL = "https://api.anthropic.com/v1/models"
     private let maxTokens = 1000
     private let timeout: TimeInterval = 30.0
     
@@ -156,6 +157,57 @@ class ClaudeService: ObservableObject {
         
         return request
     }
+    
+    func fetchAvailableModels() async throws -> [ClaudeModel] {
+        print("🔧 ClaudeService: Fetching available models...")
+        
+        guard let apiKey = configManager.claudeApiKey, !apiKey.isEmpty else {
+            print("❌ ClaudeService: API key missing for model fetching")
+            throw ClaudeError.missingApiKey
+        }
+        
+        guard let url = URL(string: modelsURL) else {
+            throw ClaudeError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        request.timeoutInterval = 30.0
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        
+        let (data, response) = try await urlSession.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("❌ ClaudeService: Invalid response type for models")
+            throw ClaudeError.invalidResponse
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            print("❌ ClaudeService: Models API error (status: \(httpResponse.statusCode))")
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("❌ ClaudeService: Error details: \(errorString)")
+            }
+            throw ClaudeError.apiError(httpResponse.statusCode, data)
+        }
+        
+        let modelsResponse = try JSONDecoder().decode(ClaudeModelsResponse.self, from: data)
+        
+        // Filter models to only include those from the last year
+        let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
+        let filteredModels = modelsResponse.data.filter { model in
+            let formatter = ISO8601DateFormatter()
+            if let createdDate = formatter.date(from: model.created_at) {
+                return createdDate >= oneYearAgo
+            }
+            return true // Include models with unparseable dates to be safe
+        }
+        
+        print("✅ ClaudeService: Fetched \(modelsResponse.data.count) models, filtered to \(filteredModels.count) recent models")
+        return filteredModels
+    }
 }
 
 // MARK: - Request/Response Models
@@ -225,6 +277,23 @@ struct ClaudeContent: Codable {
 struct ClaudeUsage: Codable {
     let input_tokens: Int
     let output_tokens: Int
+}
+
+// MARK: - Models API Response
+
+struct ClaudeModelsResponse: Codable {
+    let data: [ClaudeModel]
+}
+
+struct ClaudeModel: Codable, Identifiable {
+    let id: String
+    let display_name: String
+    let type: String
+    let created_at: String
+    
+    var displayName: String {
+        return display_name
+    }
 }
 
 // MARK: - Error Types

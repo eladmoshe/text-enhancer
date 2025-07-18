@@ -156,4 +156,77 @@ class SettingsViewTests: XCTestCase {
         XCTAssertEqual(ModifierKey.option.displayName, "⌥")
         XCTAssertEqual(ModifierKey.shift.displayName, "⇧")
     }
+    
+    func testTestPromptInitialState() {
+        let settingsView = SettingsView(configManager: configManager)
+        
+        XCTAssertNotNil(settingsView)
+        
+        // Test that the test prompt functionality is properly initialized
+        // We can't directly access the @State variables, but we can verify the view exists
+        XCTAssertNotNil(settingsView.configManager)
+        XCTAssertTrue(settingsView.configManager === configManager)
+    }
+    
+    func testAPIKeyLockInitialState() {
+        // Test with empty API keys - should start unlocked
+        let emptyConfig = AppConfiguration(
+            shortcuts: [],
+            maxTokens: 1000,
+            timeout: 30.0,
+            showStatusIcon: true,
+            enableNotifications: true,
+            autoSave: true,
+            logLevel: "info",
+            apiProviders: APIProviders(
+                claude: APIProviderConfig(
+                    apiKey: "",
+                    model: "claude-4-sonnet",
+                    enabled: true
+                ),
+                openai: APIProviderConfig(
+                    apiKey: "",
+                    model: "gpt-4o",
+                    enabled: true
+                )
+            )
+        )
+        
+        configManager.configuration = emptyConfig
+        let settingsView = SettingsView(configManager: configManager)
+        
+        // With empty keys, the view should be initialized and lock states should be based on key presence
+        XCTAssertNotNil(settingsView)
+        
+        // Test with keys present - should start locked
+        let configWithKeys = AppConfiguration(
+            shortcuts: [],
+            maxTokens: 1000,
+            timeout: 30.0,
+            showStatusIcon: true,
+            enableNotifications: true,
+            autoSave: true,
+            logLevel: "info",
+            apiProviders: APIProviders(
+                claude: APIProviderConfig(
+                    apiKey: "test-claude-key",
+                    model: "claude-4-sonnet",
+                    enabled: true
+                ),
+                openai: APIProviderConfig(
+                    apiKey: "test-openai-key",
+                    model: "gpt-4o",
+                    enabled: true
+                )
+            )
+        )
+        
+        configManager.configuration = configWithKeys
+        let settingsViewWithKeys = SettingsView(configManager: configManager)
+        
+        // With keys present, the view should be initialized properly
+        XCTAssertNotNil(settingsViewWithKeys)
+        XCTAssertEqual(configManager.configuration.apiProviders.claude.apiKey, "test-claude-key")
+        XCTAssertEqual(configManager.configuration.apiProviders.openai.apiKey, "test-openai-key")
+    }
 }

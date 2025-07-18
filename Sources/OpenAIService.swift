@@ -4,6 +4,7 @@ class OpenAIService: ObservableObject {
     private let configManager: ConfigurationManager
     private let urlSession: URLSession
     private let apiURL = "https://api.openai.com/v1/chat/completions"
+    private let modelsURL = "https://api.openai.com/v1/models"
     private let maxTokens = 1000
     private let timeout: TimeInterval = 30.0
     
@@ -142,6 +143,59 @@ class OpenAIService: ObservableObject {
         
         return request
     }
+    
+    func fetchAvailableModels() async throws -> [OpenAIModel] {
+        print("🔧 OpenAIService: Fetching available models...")
+        
+        guard let apiKey = configManager.openaiApiKey, !apiKey.isEmpty else {
+            print("❌ OpenAIService: API key missing for model fetching")
+            throw OpenAIError.missingApiKey
+        }
+        
+        guard let url = URL(string: modelsURL) else {
+            throw OpenAIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 30.0
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        
+        let (data, response) = try await urlSession.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("❌ OpenAIService: Invalid response type for models")
+            throw OpenAIError.invalidResponse
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            print("❌ OpenAIService: Models API error (status: \(httpResponse.statusCode))")
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("❌ OpenAIService: Error details: \(errorString)")
+            }
+            throw OpenAIError.apiError(httpResponse.statusCode, data)
+        }
+        
+        let modelsResponse = try JSONDecoder().decode(OpenAIModelsResponse.self, from: data)
+        
+        // Filter models to only include chat models from the last year
+        let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
+        let filteredModels = modelsResponse.data.filter { model in
+            // Only include models that are suitable for chat completions
+            let isChatModel = model.id.contains("gpt") || model.id.contains("o1")
+            
+            // Check if model is from the last year
+            let createdDate = Date(timeIntervalSince1970: TimeInterval(model.created))
+            let isRecent = createdDate >= oneYearAgo
+            
+            return isChatModel && isRecent
+        }
+        
+        print("✅ OpenAIService: Fetched \(modelsResponse.data.count) models, filtered to \(filteredModels.count) recent chat models")
+        return filteredModels
+    }
 }
 
 // MARK: - Request/Response Models
@@ -208,6 +262,37 @@ struct OpenAIUsage: Codable {
     let prompt_tokens: Int
     let completion_tokens: Int
     let total_tokens: Int
+}
+
+// MARK: - Models API Response
+
+struct OpenAIModelsResponse: Codable {
+    let data: [OpenAIModel]
+}
+
+struct OpenAIModel: Codable, Identifiable {
+    let id: String
+    let object: String
+    let created: Int
+    let owned_by: String
+    
+    var displayName: String {
+        // Make display names more user-friendly
+        switch id {
+        case "gpt-4o": return "GPT-4o"
+        case "gpt-4o-mini": return "GPT-4o Mini"
+        case "gpt-4-turbo": return "GPT-4 Turbo"
+        case "gpt-4": return "GPT-4"
+        case "gpt-3.5-turbo": return "GPT-3.5 Turbo"
+        case "o1-preview": return "o1 Preview"
+        case "o1-mini": return "o1 Mini"
+        default:
+            // For other models, capitalize and clean up the name
+            return id.replacingOccurrences(of: "-", with: " ")
+                    .replacingOccurrences(of: "_", with: " ")
+                    .capitalized
+        }
+    }
 }
 
 // MARK: - Error Types
