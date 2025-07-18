@@ -40,7 +40,7 @@ class SettingsViewTests: XCTestCase {
         XCTAssertEqual(configManager.configuration.shortcuts.count, 1)
         XCTAssertEqual(configManager.configuration.shortcuts.first?.name, "Improve Text")
         XCTAssertEqual(configManager.configuration.shortcuts.first?.provider, .claude)
-        XCTAssertEqual(configManager.configuration.shortcuts.first?.model, "claude-4-sonnet")
+        XCTAssertEqual(configManager.configuration.shortcuts.first?.model, "claude-3-5-sonnet-20241022")
         XCTAssertEqual(configManager.configuration.shortcuts.first?.keyCode, 18)
         XCTAssertEqual(configManager.configuration.shortcuts.first?.modifiers, [.control, .option])
     }
