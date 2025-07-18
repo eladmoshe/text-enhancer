@@ -36,13 +36,15 @@ class DefaultTextSelectionProvider: TextSelectionProvider {
         var focusedElement: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
         
-        guard result == .success, let focusedElement = focusedElement else {
+        guard result == .success, let focusedElement = focusedElement,
+              CFGetTypeID(focusedElement) == AXUIElementGetTypeID() else {
             return nil
         }
+        let axElement = unsafeBitCast(focusedElement, to: AXUIElement.self)
         
         // Try to get selected text from the focused element
         var selectedText: CFTypeRef?
-        let selectedTextResult = AXUIElementCopyAttributeValue(focusedElement as! AXUIElement, kAXSelectedTextAttribute as CFString, &selectedText)
+        let selectedTextResult = AXUIElementCopyAttributeValue(axElement, kAXSelectedTextAttribute as CFString, &selectedText)
         
         if selectedTextResult == .success, let text = selectedText as? String, !text.isEmpty {
             return text
@@ -50,7 +52,7 @@ class DefaultTextSelectionProvider: TextSelectionProvider {
         
         // If no selected text attribute, try to get the value and assume it's all selected
         var value: CFTypeRef?
-        let valueResult = AXUIElementCopyAttributeValue(focusedElement as! AXUIElement, kAXValueAttribute as CFString, &value)
+        let valueResult = AXUIElementCopyAttributeValue(axElement, kAXValueAttribute as CFString, &value)
         
         if valueResult == .success, let text = value as? String, !text.isEmpty {
             return text
@@ -319,13 +321,12 @@ class TextProcessor: ObservableObject {
                     print("🔧 TextProcessor: Screenshot-only mode - no text selection required")
                 } else {
                     // Get selected text for normal shortcuts
-                    let text = textSelectionProvider.getSelectedText()
-                    if text == nil || text!.isEmpty {
+                    guard let text = textSelectionProvider.getSelectedText(), !text.isEmpty else {
                         print("🔧 TextProcessor: No text selected and not screenshot-only mode")
                         await alertPresenter.showError("No text selected")
                         return
                     }
-                    selectedText = text!
+                    selectedText = text
                     print("🔧 TextProcessor: Processing \(selectedText.count) characters")
                 }
                 

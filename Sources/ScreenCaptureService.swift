@@ -10,7 +10,11 @@ class ScreenCaptureService {
             return nil
         }
         
-        let displayID = activeScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as! CGDirectDisplayID
+        guard let number = activeScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
+            print("❌ ScreenCaptureService: Failed to get display ID from screen device description")
+            return nil
+        }
+        let displayID = CGDirectDisplayID(number.uint32Value)
         
         guard let cgImage = CGDisplayCreateImage(displayID) else {
             print("❌ ScreenCaptureService: Failed to create CGImage from display")

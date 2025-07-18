@@ -73,6 +73,12 @@ class MenuBarManager: ObservableObject {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Master shortcut menu item
+        let masterShortcutItem = NSMenuItem(title: "⌃⌥⇥ - Show All Shortcuts", action: #selector(showMasterShortcutMenu), keyEquivalent: "")
+        masterShortcutItem.target = self
+        masterShortcutItem.toolTip = "Show floating menu with all shortcuts"
+        menu.addItem(masterShortcutItem)
+        
         // Shortcut actions - make them clickable from menu
         let shortcuts = configManager.configuration.shortcuts
         if shortcuts.isEmpty {
@@ -231,6 +237,11 @@ class MenuBarManager: ObservableObject {
         Task {
             await textProcessor.processSelectedText(with: shortcut.prompt)
         }
+    }
+    
+    @objc func showMasterShortcutMenu() {
+        // Trigger the master shortcut menu
+        shortcutManager.showMasterShortcutMenu()
     }
     
     @objc private func requestAccessibilityPermissions() {

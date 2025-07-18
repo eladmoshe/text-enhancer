@@ -1,8 +1,9 @@
 import AppKit
 import SwiftUI
 
-class ShortcutMenuController: ObservableObject {
+class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
     private var menuWindow: NSWindow?
+    private var hostingController: NSHostingController<ShortcutMenuView>?
     private let configManager: ConfigurationManager
     private let textProcessor: TextProcessor
     private var eventMonitor: Any?
@@ -10,6 +11,7 @@ class ShortcutMenuController: ObservableObject {
     init(configManager: ConfigurationManager, textProcessor: TextProcessor) {
         self.configManager = configManager
         self.textProcessor = textProcessor
+        super.init()
     }
     
     func showMenu() {
@@ -22,11 +24,11 @@ class ShortcutMenuController: ObservableObject {
         
         // Don't show menu if no shortcuts are configured
         if shortcuts.isEmpty {
-            print("🔧 ShortcutMenuController: No shortcuts configured, not showing menu")
+            NSLog("🔧 ShortcutMenuController: No shortcuts configured, not showing menu")
             return
         }
         
-        print("🔧 ShortcutMenuController: Showing menu with \(shortcuts.count) shortcuts")
+        NSLog("🔧 ShortcutMenuController: Showing menu with \(shortcuts.count) shortcuts")
         
         // Create the menu view
         let menuView = ShortcutMenuView(
@@ -35,32 +37,35 @@ class ShortcutMenuController: ObservableObject {
                 self?.executeShortcut(shortcut)
             },
             onDismiss: { [weak self] in
-                self?.hideMenu()
+                // Defer hideMenu to next run loop to avoid UIKit/AppKit reentrancy crashes
+                DispatchQueue.main.async {
+                    self?.hideMenu()
+                }
             }
         )
         
         // Create the hosting view controller
         let hostingController = NSHostingController(rootView: menuView)
-        
-        // Create a custom responder to handle keyboard events
-        let customResponder = MenuKeyboardResponder(menuView: menuView)
-        hostingController.view.addSubview(customResponder)
+        self.hostingController = hostingController
         
         // Create the window
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 400),
-            styleMask: [.borderless],
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         
+        window.title = "Shortcuts Menu"
+        window.isReleasedWhenClosed = false // Avoid premature deallocation that could cause crashes
         window.contentViewController = hostingController
-        window.backgroundColor = .clear
-        window.isOpaque = false
-        window.hasShadow = false
-        window.level = NSWindow.Level.popUpMenu
-        window.isMovable = false
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.backgroundColor = .windowBackgroundColor
+        window.isOpaque = true
+        window.hasShadow = true
+        window.level = NSWindow.Level.floating
+        window.isMovable = true
+        window.collectionBehavior = [.canJoinAllSpaces]
+        window.delegate = self
         
         // Center the window on screen
         centerWindowOnScreen(window)
@@ -68,48 +73,63 @@ class ShortcutMenuController: ObservableObject {
         // Show the window
         window.makeKeyAndOrderFront(nil)
         
-        // Make the custom responder the first responder
-        window.makeFirstResponder(customResponder)
-        
         // Store reference
         menuWindow = window
         
-        // Set up event monitoring for auto-dismiss
-        setupEventMonitoring()
+        NSLog("🔧 ShortcutMenuController: Window created and displayed")
     }
     
     func hideMenu() {
-        print("🔧 ShortcutMenuController: Hiding menu")
-        
-        // Clean up event monitoring
-        if let eventMonitor = eventMonitor {
-            NSEvent.removeMonitor(eventMonitor)
-            self.eventMonitor = nil
+        guard let window = menuWindow else { return }
+        NSLog("🔧 ShortcutMenuController: Hiding menu (orderOut)")
+
+        // Hide the window without destroying it immediately to avoid autorelease-pool crashes
+        window.orderOut(nil)
+
+        // Clean up after a slight delay to allow AppKit to finish its event processing safely
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self else { return }
+            self.menuWindow = nil
+            // Note: keep hostingController retained to avoid use-after-free in SwiftUI
         }
-        
-        // Close and remove window
-        menuWindow?.close()
+    }
+    
+    // MARK: - NSWindowDelegate
+    func windowWillClose(_ notification: Notification) {
+        NSLog("🔧 ShortcutMenuController: Window will close")
+        // Clean up references when window closes
         menuWindow = nil
+        // Keep hostingController retained to avoid potential SwiftUI deallocation timing crash
     }
     
     private func executeShortcut(_ shortcut: ShortcutConfiguration) {
-        print("🔧 ShortcutMenuController: Executing shortcut: \(shortcut.name)")
+        NSLog("🔧 ShortcutMenuController: Executing shortcut: \(shortcut.name)")
         
         // Hide menu first
         hideMenu()
         
-        // Handle screenshot timing if needed
-        if shortcut.effectiveIncludeScreenshot {
-            // Add a small delay to ensure menu is fully closed before screenshot
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                Task {
-                    await self.textProcessor.processSelectedText(with: shortcut.prompt, shortcut: shortcut)
-                }
+        // Add safer execution with error handling
+        Task { [weak self] in
+            guard let self = self else { 
+                NSLog("🔧 ShortcutMenuController: Self is nil, aborting execution")
+                return 
             }
-        } else {
-            // Execute immediately for non-screenshot shortcuts
-            Task {
+            
+            do {
+                NSLog("🔧 ShortcutMenuController: About to call textProcessor.processSelectedText")
+                
+                // Handle screenshot timing if needed
+                if shortcut.effectiveIncludeScreenshot {
+                    // Add a small delay to ensure menu is fully closed before screenshot
+                    try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+                }
+                
                 await self.textProcessor.processSelectedText(with: shortcut.prompt, shortcut: shortcut)
+
+                NSLog("🔧 ShortcutMenuController: Successfully executed shortcut: \(shortcut.name)")
+                
+            } catch {
+                NSLog("🔧 ShortcutMenuController: Error executing shortcut: \(error)")
             }
         }
     }
@@ -126,49 +146,9 @@ class ShortcutMenuController: ObservableObject {
         window.setFrameOrigin(NSPoint(x: x, y: y))
     }
     
-    private func setupEventMonitoring() {
-        // Monitor for clicks outside the menu to auto-dismiss
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-            guard let self = self, let window = self.menuWindow else { return }
-            
-            let clickLocation = event.locationInWindow
-            let windowFrame = window.frame
-            
-            // Check if click is outside the menu window
-            if !windowFrame.contains(clickLocation) {
-                self.hideMenu()
-            }
-        }
-    }
     
     deinit {
         hideMenu()
-    }
-}
-
-// Custom responder to handle keyboard events for the menu
-class MenuKeyboardResponder: NSView {
-    private let menuView: ShortcutMenuView
-    
-    init(menuView: ShortcutMenuView) {
-        self.menuView = menuView
-        super.init(frame: .zero)
-        
-        // Make this view accept first responder
-        self.wantsLayer = true
-        self.layer?.backgroundColor = NSColor.clear.cgColor
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override var acceptsFirstResponder: Bool {
-        return true
-    }
-    
-    override func keyDown(with event: NSEvent) {
-        menuView.handleKeyEvent(event)
     }
 }
 

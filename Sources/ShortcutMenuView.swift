@@ -10,107 +10,64 @@ struct ShortcutMenuView: View {
     @State private var hoveredIndex: Int? = nil
     
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 8) {
             // Header
-            HStack {
-                Text("Select Shortcut")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                Spacer()
-                Button(action: onDismiss) {
-                    Image(systemName: "xmark")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help("Close menu (Esc)")
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 8)
+            Text("Select Shortcut (\(shortcuts.count) available)")
+                .font(.headline)
+                .padding()
             
-            Divider()
-            
-            // Shortcuts list
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(shortcuts.enumerated()), id: \.element.id) { index, shortcut in
-                        ShortcutMenuItemView(
-                            shortcut: shortcut,
-                            index: index,
-                            isSelected: index == selectedIndex,
-                            isHovered: index == hoveredIndex,
-                            onTap: {
-                                selectShortcut(at: index)
-                            },
-                            onHover: { isHovering in
-                                hoveredIndex = isHovering ? index : nil
-                            }
-                        )
+            // Shortcuts list - using regular VStack instead of LazyVStack
+            VStack(spacing: 4) {
+                ForEach(0..<shortcuts.count, id: \.self) { index in
+                    let shortcut = shortcuts[index]
+                    Button(action: {
+                        NSLog("🔧 Button clicked for: \(shortcut.name)")
+                        selectShortcut(at: index)
+                    }) {
+                        HStack {
+                            Text("\(index + 1). \(shortcut.name)")
+                                .foregroundColor(.black)
+                            Spacer()
+                            Text(shortcut.provider.displayName)
+                                .foregroundColor(.gray)
+                                .font(.caption)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                    .onAppear {
+                        NSLog("🔧 Button appeared for: \(shortcut.name)")
                     }
                 }
             }
-            .frame(maxHeight: 400)
-            
-            // Footer with instructions
-            HStack {
-                Text("↑↓ Navigate • Enter Select • Esc Close • 1-9 Quick Select")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-            }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            
+            // Footer
+            Button("Close") {
+                NSLog("🔧 Close button clicked")
+                onDismiss()
+            }
+            .padding()
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.regularMaterial)
-                .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
-        )
-        .frame(width: 500)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(radius: 10)
+        .frame(width: 400, height: 300)
         .onAppear {
-            // Focus will be handled by the window controller
+            NSLog("🔧 ShortcutMenuView: Appeared with \(shortcuts.count) shortcuts")
+            for (index, shortcut) in shortcuts.enumerated() {
+                NSLog("🔧 ShortcutMenuView: Shortcut \(index): \(shortcut.name) - \(shortcut.provider.displayName)")
+            }
         }
     }
     
     private func selectShortcut(at index: Int) {
         guard index >= 0 && index < shortcuts.count else { return }
+        NSLog("🔧 ShortcutMenuView: Selected shortcut at index \(index): \(shortcuts[index].name)")
         onSelectShortcut(shortcuts[index])
-    }
-    
-    func handleKeyEvent(_ event: NSEvent) {
-        switch event.keyCode {
-        case 125: // Down arrow
-            selectedIndex = min(selectedIndex + 1, shortcuts.count - 1)
-        case 126: // Up arrow
-            selectedIndex = max(selectedIndex - 1, 0)
-        case 36: // Enter
-            selectShortcut(at: selectedIndex)
-        case 53: // Escape
-            onDismiss()
-        default:
-            // Handle number keys 1-9 for quick selection
-            if let numberKey = getNumberFromKeyCode(event.keyCode),
-               numberKey > 0 && numberKey <= shortcuts.count {
-                selectShortcut(at: numberKey - 1)
-            }
-        }
-    }
-    
-    private func getNumberFromKeyCode(_ keyCode: UInt16) -> Int? {
-        switch keyCode {
-        case 18: return 1
-        case 19: return 2
-        case 20: return 3
-        case 21: return 4
-        case 22: return 5
-        case 23: return 6
-        case 24: return 7
-        case 25: return 8
-        case 26: return 9
-        default: return nil
-        }
     }
 }
 
@@ -206,6 +163,9 @@ struct ShortcutMenuItemView: View {
         }
         .onHover { hovering in
             onHover(hovering)
+        }
+        .onAppear {
+            NSLog("🔧 ShortcutMenuItemView: Appeared for \(shortcut.name)")
         }
     }
     
