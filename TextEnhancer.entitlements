@@ -12,11 +12,15 @@
     <key>com.apple.security.network.client</key>
     <true/>
     
-    <!-- Accessibility access for text capture -->
+    <!-- Accessibility automation - required for text capture and system interaction -->
     <key>com.apple.security.automation.apple-events</key>
     <true/>
     
-    <!-- Hardened runtime -->
+    <!-- Screen capture permissions -->
+    <key>com.apple.security.device.capture</key>
+    <true/>
+    
+    <!-- Hardened runtime (minimal restrictions for accessibility) -->
     <key>com.apple.security.cs.allow-jit</key>
     <false/>
     
@@ -29,15 +33,9 @@
     <key>com.apple.security.cs.disable-library-validation</key>
     <false/>
     
-    <!-- Required for global keyboard shortcuts -->
-    <key>com.apple.security.device.audio-input</key>
-    <false/>
-    
-    <key>com.apple.security.device.camera</key>
-    <false/>
-    
-    <!-- Required for screen capture -->
-    <key>com.apple.security.device.capture</key>
-    <true/>
+    <!-- NO APP SANDBOX - Required for accessibility features to work properly -->
+    <!-- The following line is intentionally commented out: -->
+    <!-- <key>com.apple.security.app-sandbox</key> -->
+    <!-- <true/> -->
 </dict>
 </plist> 

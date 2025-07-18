@@ -3,14 +3,16 @@ import Foundation
 class OpenAIService: ObservableObject {
     private let configManager: ConfigurationManager
     private let urlSession: URLSession
+    private let cacheManager: ModelCacheManager
     private let apiURL = "https://api.openai.com/v1/chat/completions"
     private let modelsURL = "https://api.openai.com/v1/models"
     private let maxTokens = 1000
     private let timeout: TimeInterval = 30.0
     
-    init(configManager: ConfigurationManager, urlSession: URLSession = .shared) {
+    init(configManager: ConfigurationManager, urlSession: URLSession = .shared, cacheManager: ModelCacheManager = ModelCacheManager()) {
         self.configManager = configManager
         self.urlSession = urlSession
+        self.cacheManager = cacheManager
     }
     
     func enhanceText(_ text: String, with prompt: String, using model: String) async throws -> String {
@@ -147,6 +149,14 @@ class OpenAIService: ObservableObject {
     func fetchAvailableModels() async throws -> [OpenAIModel] {
         print("🔧 OpenAIService: Fetching available models...")
         
+        // Check cache first
+        if let cachedModels = cacheManager.getCachedOpenAIModels() {
+            print("✅ OpenAIService: Using cached models (\(cachedModels.count) models)")
+            return cachedModels
+        }
+        
+        print("🔧 OpenAIService: Cache miss or expired, fetching from API...")
+        
         guard let apiKey = configManager.openaiApiKey, !apiKey.isEmpty else {
             print("❌ OpenAIService: API key missing for model fetching")
             throw OpenAIError.missingApiKey
@@ -180,21 +190,113 @@ class OpenAIService: ObservableObject {
         
         let modelsResponse = try JSONDecoder().decode(OpenAIModelsResponse.self, from: data)
         
-        // Filter models to only include chat models from the last year
-        let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
+        // Filter models to include all relevant modern chat models for text and image processing
         let filteredModels = modelsResponse.data.filter { model in
-            // Only include models that are suitable for chat completions
-            let isChatModel = model.id.contains("gpt") || model.id.contains("o1")
+            let lowerModelId = model.id.lowercased()
             
-            // Check if model is from the last year
-            let createdDate = Date(timeIntervalSince1970: TimeInterval(model.created))
-            let isRecent = createdDate >= oneYearAgo
+            // Exclude models that are clearly not for chat/completions
+            let excludePatterns = [
+                "whisper",          // Audio transcription
+                "tts",              // Text-to-speech
+                "dall-e",           // Image generation
+                "text-embedding",   // Embeddings
+                "text-moderation",  // Moderation
+                "babbage",          // Legacy models
+                "ada",              // Legacy models
+                "curie",            // Legacy models
+                "davinci",          // Legacy models (unless it's a newer instruct variant)
+                "code-search",      // Code search
+                "code-edit",        // Code editing
+                "similarity",       // Similarity models
+                "gpt-3.5",          // Outdated GPT-3.5 models
+                "gpt-3-",           // Outdated GPT-3 models
+                "gpt-2",            // Very old models
+                "gpt-1"             // Very old models
+            ]
             
-            return isChatModel && isRecent
+            // Check if model should be excluded
+            let shouldExclude = excludePatterns.contains { pattern in
+                lowerModelId.contains(pattern.lowercased())
+            }
+            
+            if shouldExclude {
+                return false
+            }
+            
+            // Include modern GPT models (GPT-4+, GPT-4o, GPT-5+, etc.)
+            let isModernGPTModel = lowerModelId.hasPrefix("gpt-4") || 
+                                  lowerModelId.hasPrefix("gpt-5") ||
+                                  lowerModelId.hasPrefix("gpt-6") ||
+                                  lowerModelId.hasPrefix("gpt-7") ||
+                                  lowerModelId.hasPrefix("gpt-8") ||
+                                  lowerModelId.hasPrefix("gpt-9") ||
+                                  lowerModelId.hasPrefix("chatgpt")
+            
+            // Include all o1 models (reasoning models)
+            let isO1Model = lowerModelId.hasPrefix("o1")
+            
+            // Include vision models (but exclude if they're old)
+            let isVisionModel = lowerModelId.contains("vision") && !shouldExclude
+            
+            // Include any modern chat completion models
+            let isChatModel = (lowerModelId.contains("chat") || 
+                             lowerModelId.contains("instruct") ||
+                             lowerModelId.contains("completion")) && !shouldExclude
+            
+            return isModernGPTModel || isO1Model || isVisionModel || isChatModel
         }
         
-        print("✅ OpenAIService: Fetched \(modelsResponse.data.count) models, filtered to \(filteredModels.count) recent chat models")
-        return filteredModels
+        // Sort models by relevance and capability (most capable first)
+        let sortedModels = filteredModels.sorted { model1, model2 in
+            let priority1 = getModelPriority(model1.id)
+            let priority2 = getModelPriority(model2.id)
+            return priority1 < priority2 // Lower priority number = higher priority
+        }
+        
+        print("✅ OpenAIService: Fetched \(modelsResponse.data.count) models, filtered to \(sortedModels.count) relevant models")
+        
+        // Cache the filtered models
+        cacheManager.cacheOpenAIModels(sortedModels)
+        
+        return sortedModels
+    }
+    
+    private func getModelPriority(_ modelId: String) -> Int {
+        // Pattern-based priority system (lower number = higher priority)
+        
+        // Extract version numbers for better sorting
+        let lowerModelId = modelId.lowercased()
+        
+        // Future GPT models (GPT-5, GPT-6, etc.) - highest priority
+        if lowerModelId.hasPrefix("gpt-5") { return 1 }
+        if lowerModelId.hasPrefix("gpt-6") { return 1 }
+        if lowerModelId.hasPrefix("gpt-7") { return 1 }
+        if lowerModelId.hasPrefix("gpt-8") { return 1 }
+        if lowerModelId.hasPrefix("gpt-9") { return 1 }
+        
+        // Current latest models
+        if lowerModelId.hasPrefix("gpt-4o") { return 10 }
+        if lowerModelId.hasPrefix("o1") { return 15 }
+        
+        // GPT-4 family
+        if lowerModelId.hasPrefix("gpt-4") {
+            if lowerModelId.contains("turbo") { return 20 }
+            if lowerModelId.contains("vision") { return 22 }
+            return 25 // Standard GPT-4
+        }
+        
+        // Other GPT models that might slip through
+        if lowerModelId.hasPrefix("gpt-") { return 60 }
+        
+        // Chat models
+        if lowerModelId.contains("chat") { return 70 }
+        if lowerModelId.contains("instruct") { return 75 }
+        
+        // Vision models
+        if lowerModelId.contains("vision") { return 80 }
+        
+        // Everything else
+        return 99
     }
 }
 

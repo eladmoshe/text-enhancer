@@ -20,6 +20,9 @@ struct SettingsView: View {
     @State private var isClaudeKeyLocked: Bool = false
     @State private var isOpenaiKeyLocked: Bool = false
     
+    // Shared cache manager instance
+    private let cacheManager = ModelCacheManager()
+    
     init(configManager: ConfigurationManager) {
         self.configManager = configManager
         let config = configManager.configuration
@@ -610,6 +613,9 @@ struct ShortcutEditView: View {
     @State private var availableOpenAIModels: [OpenAIModel] = []
     @State private var isLoadingModels: Bool = false
     
+    // Shared cache manager instance
+    private let cacheManager = ModelCacheManager()
+    
     init(shortcut: ShortcutConfiguration?, onSave: @escaping (ShortcutConfiguration) -> Void, onCancel: @escaping () -> Void) {
         self.shortcut = shortcut
         self.onSave = onSave
@@ -801,8 +807,23 @@ struct ShortcutEditView: View {
         .frame(minWidth: 500, minHeight: 400)
         .onAppear {
             Task {
+                await preloadCachedModels()
                 await fetchModels()
             }
+        }
+    }
+    
+    @MainActor
+    private func preloadCachedModels() async {
+        // Load cached models immediately if available
+        if let cachedClaudeModels = cacheManager.getCachedClaudeModels() {
+            availableClaudeModels = cachedClaudeModels
+            print("✅ ShortcutEditView: Preloaded \(cachedClaudeModels.count) cached Claude models")
+        }
+        
+        if let cachedOpenAIModels = cacheManager.getCachedOpenAIModels() {
+            availableOpenAIModels = cachedOpenAIModels
+            print("✅ ShortcutEditView: Preloaded \(cachedOpenAIModels.count) cached OpenAI models")
         }
     }
     
@@ -838,7 +859,7 @@ struct ShortcutEditView: View {
         do {
             // Create a temporary config manager for API calls
             let tempConfigManager = ConfigurationManager()
-            let claudeService = ClaudeService(configManager: tempConfigManager)
+            let claudeService = ClaudeService(configManager: tempConfigManager, cacheManager: cacheManager)
             let models = try await claudeService.fetchAvailableModels()
             availableClaudeModels = models
             
@@ -863,7 +884,7 @@ struct ShortcutEditView: View {
         do {
             // Create a temporary config manager for API calls
             let tempConfigManager = ConfigurationManager()
-            let openAIService = OpenAIService(configManager: tempConfigManager)
+            let openAIService = OpenAIService(configManager: tempConfigManager, cacheManager: cacheManager)
             let models = try await openAIService.fetchAvailableModels()
             availableOpenAIModels = models
             

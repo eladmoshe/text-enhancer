@@ -3,13 +3,15 @@ import Foundation
 class ClaudeService: ObservableObject {
     private let configManager: ConfigurationManager
     private let urlSession: URLSession
+    private let cacheManager: ModelCacheManager
     private let apiURL = "https://api.anthropic.com/v1/messages"
     private let modelsURL = "https://api.anthropic.com/v1/models"
     private let maxTokens = 1000
     private let timeout: TimeInterval = 30.0
     
-    init(configManager: ConfigurationManager, urlSession: URLSession = .shared) {
+    init(configManager: ConfigurationManager, urlSession: URLSession = .shared, cacheManager: ModelCacheManager = ModelCacheManager()) {
         self.configManager = configManager
+        self.cacheManager = cacheManager
         
         // Create a custom URL session with timeout configuration
         let configuration = URLSessionConfiguration.default
@@ -161,6 +163,14 @@ class ClaudeService: ObservableObject {
     func fetchAvailableModels() async throws -> [ClaudeModel] {
         print("🔧 ClaudeService: Fetching available models...")
         
+        // Check cache first
+        if let cachedModels = cacheManager.getCachedClaudeModels() {
+            print("✅ ClaudeService: Using cached models (\(cachedModels.count) models)")
+            return cachedModels
+        }
+        
+        print("🔧 ClaudeService: Cache miss or expired, fetching from API...")
+        
         guard let apiKey = configManager.claudeApiKey, !apiKey.isEmpty else {
             print("❌ ClaudeService: API key missing for model fetching")
             throw ClaudeError.missingApiKey
@@ -206,6 +216,10 @@ class ClaudeService: ObservableObject {
         }
         
         print("✅ ClaudeService: Fetched \(modelsResponse.data.count) models, filtered to \(filteredModels.count) recent models")
+        
+        // Cache the filtered models
+        cacheManager.cacheClaudeModels(filteredModels)
+        
         return filteredModels
     }
 }

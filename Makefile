@@ -5,6 +5,10 @@
 # Configuration
 INSTALL_PATH = $(HOME)/Applications/TextEnhancer.app
 BUNDLE_NAME = TextEnhancer.app
+# Developer ID certificate common-name used by codesign. Replace the placeholder
+# with the exact string that appears in `security find-identity -v -p codesigning`.
+# You can still override this at invocation-time with `SIGN_ID="…" make bundle-signed`.
+SIGN_ID ?= Developer ID Application: YOUR_NAME (TEAMID)
 
 # Default target
 all: build
@@ -128,6 +132,8 @@ bundle: release check-sign
 	else \
 		  echo "ℹ️  No provisioning profile embedded (set PROVISION_PROFILE=/path/to/profile.provisionprofile)"; \
 	fi
+	# Remove quarantine attribute to prevent App Translocation
+	xattr -d com.apple.quarantine $(BUNDLE_NAME) || true
 
 # Create app bundle (signed - permissions will persist across rebuilds)
 bundle-signed: release
@@ -145,9 +151,11 @@ bundle-signed: release
 	echo "APPL????" > $(BUNDLE_NAME)/Contents/PkgInfo
 	@echo "🔏 Signing app bundle..."
 	codesign --force --deep --options runtime \
+		--timestamp=none \
 		--entitlements TextEnhancer.entitlements \
 		--sign "$(SIGN_ID)" $(BUNDLE_NAME)/Contents/MacOS/TextEnhancer
 	codesign --force --deep --options runtime \
+		--timestamp=none \
 		--sign "$(SIGN_ID)" $(BUNDLE_NAME)
 	@echo "✅ Signed app bundle created: $(BUNDLE_NAME)"
 	@echo "🎯 Accessibility permissions will now persist across rebuilds!"
@@ -161,6 +169,7 @@ install: bundle-signed
 		rm -rf "$(INSTALL_PATH)"; \
 	fi
 	cp -R $(BUNDLE_NAME) "$(INSTALL_PATH)"
+	xattr -d com.apple.quarantine "$(INSTALL_PATH)" || true
 	@echo "📁 Ensuring app support directory exists..."
 	@mkdir -p ~/Library/Application\ Support/TextEnhancer/
 	@echo "✅ App support directory ready"

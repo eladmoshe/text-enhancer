@@ -1,1 +1,2 @@
 - Markdown docs should go to the docs/ folder
+- After changes, always run the new version of the app so the user can tests it
