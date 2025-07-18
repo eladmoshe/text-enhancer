@@ -100,3 +100,31 @@ The previous approach used separate bundle identifiers (`com.textenhancer.app` v
 # Help
 ./build.sh --help
 ```
+
+## 🔍 Build Script Reference (Cheat-Sheet)
+
+| Scenario | Command | Builds | Output Location | Auto-Installs To | Permissions Persistence |
+|----------|---------|--------|-----------------|------------------|-------------------------|
+| **Rapid development** | `./build.sh --run` | Debug binary only | `.build/debug/TextEnhancer` | _Not installed_ (runs in-place) | ❌ (resets every run) |
+| **Unsigned bundle** | `./build.sh --bundle` | App bundle | `TextEnhancer.app` in project root | `~/Applications/TextEnhancer.app` | ❌ (resets on every rebuild) |
+| **Signed bundle (recommended)** | `./build.sh --bundle-signed` | Signed app bundle | `TextEnhancer.app` (signed) | `~/Applications/TextEnhancer.app` | ✅ (persists across rebuilds) |
+| **CI/Test run** | `./build.sh --test` | Debug + tests | `.build/` products | – | N/A |
+| **Status / help** | `./build.sh --status` / `--help` | – | – | – | – |
+
+### Where things end up
+
+* **Debug binary**: `.build/debug/TextEnhancer` – executed directly when using `--run`.
+* **Unsigned bundle**: `TextEnhancer.app` created in the repo root, then copied to `~/Applications/TextEnhancer.app` by the script.
+* **Signed bundle**: Same as above but code-signed with `$SIGN_ID` and copied via `make install-signed`.
+* **System-wide install** (optional): Copy the bundle to `/Applications/TextEnhancer.app` instead of to your user’s Applications folder.
+
+> **Tip**: run `make install-location` (or `./build.sh --status`) to see exactly which bundle is currently active.
+
+### Signing variable
+
+```bash
+export SIGN_ID="Apple Development: Your Name (TEAMID)"
+```
+If `SIGN_ID` is **not** set, `--bundle-signed` will abort and `--bundle` will produce an unsigned bundle (permissions will reset).
+
+---
