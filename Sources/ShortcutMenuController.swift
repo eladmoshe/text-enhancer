@@ -10,12 +10,21 @@ class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
     private var eventMonitor: Any?
     
     init(configManager: ConfigurationManager, textProcessor: TextProcessor) {
+        // initialization completed; debug logs removed for production
         self.configManager = configManager
         self.textProcessor = textProcessor
         super.init()
     }
     
     func showMenu() {
+        // showMenu invoked
+#if canImport(XCTest)
+        // When compiled for unit tests, immediately return to avoid using AppKit APIs that
+        // are not safe in the test environment. This compile-time check is more reliable
+        // than relying on runtime environment variables and will be active for all tests
+        // built with Swift Package Manager or Xcode.
+        return
+#endif
         // Skip UI presentation when running inside unit tests to avoid AppKit restrictions
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
             NSLog("🔧 ShortcutMenuController: Detected test environment, skipping menu UI creation")

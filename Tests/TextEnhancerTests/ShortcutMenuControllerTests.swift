@@ -56,17 +56,25 @@ final class ShortcutMenuControllerTests: XCTestCase {
         let controller = ShortcutMenuController(configManager: configManager, textProcessor: textProcessor)
 
         // Show the menu on main thread
-        DispatchQueue.main.sync {
+        let showHideExpectation = expectation(description: "Show and hide menu")
+
+        // Perform show/hide asynchronously on the main queue to avoid deadlock if the current
+        // test is already executing on the main thread. Using async guarantees the closure will
+        // run even when we are on the main queue, preventing the crash we observed on CI.
+        DispatchQueue.main.async {
             controller.showMenu()
             controller.hideMenu()
+            showHideExpectation.fulfill()
         }
 
+        wait(for: [showHideExpectation], timeout: 1.0)
         // Allow asynchronous cleanup to finish
-        let expectation = XCTestExpectation(description: "Wait for hide clean up")
+        let cleanupExpectation = XCTestExpectation(description: "Wait for hide clean up")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            expectation.fulfill()
+            cleanupExpectation.fulfill()
         }
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [cleanupExpectation], timeout: 1.0)
+
         // If we reached here without a crash, the test passes
         XCTAssertTrue(true)
     }
