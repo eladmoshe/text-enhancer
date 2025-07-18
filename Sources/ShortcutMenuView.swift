@@ -174,6 +174,17 @@ struct ShortcutMenuView: View {
                 NSLog("🔧 ShortcutMenuView: Shortcut \(index): \(shortcut.name) - \(shortcut.provider.displayName)")
             }
         }
+        .background(
+            // Invisible view to capture key events
+            KeyEventHandlerView { keyEvent in
+                if keyEvent.keyCode == 53 { // Escape key
+                    NSLog("🔧 ShortcutMenuView: Escape key pressed")
+                    onDismiss()
+                    return true
+                }
+                return false
+            }
+        )
     }
     
     private func selectShortcut(at index: Int) {
@@ -195,6 +206,38 @@ struct ShortcutMenuView: View {
         case "o1-mini": return "o1 mini"
         default: return model
         }
+    }
+}
+
+struct KeyEventHandlerView: NSViewRepresentable {
+    let onKeyEvent: (NSEvent) -> Bool
+    
+    func makeNSView(context: Context) -> NSView {
+        let view = KeyEventView()
+        view.onKeyEvent = onKeyEvent
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSView, context: Context) {
+        // No updates needed
+    }
+}
+
+class KeyEventView: NSView {
+    var onKeyEvent: ((NSEvent) -> Bool)?
+    
+    override var acceptsFirstResponder: Bool { true }
+    
+    override func keyDown(with event: NSEvent) {
+        if let handler = onKeyEvent, handler(event) {
+            return
+        }
+        super.keyDown(with: event)
+    }
+    
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.makeFirstResponder(self)
     }
 }
 

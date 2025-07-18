@@ -50,17 +50,16 @@ class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
         
         // Create the window
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 400),
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
         
-        window.title = "Shortcuts Menu"
         window.isReleasedWhenClosed = false // Avoid premature deallocation that could cause crashes
         window.contentViewController = hostingController
-        window.backgroundColor = .windowBackgroundColor
-        window.isOpaque = true
+        window.backgroundColor = .clear
+        window.isOpaque = false
         window.hasShadow = true
         window.level = NSWindow.Level.floating
         window.isMovable = true
@@ -76,12 +75,18 @@ class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
         // Store reference
         menuWindow = window
         
+        // Add event monitor to detect clicks outside the window
+        setupClickOutsideMonitor()
+        
         NSLog("🔧 ShortcutMenuController: Window created and displayed")
     }
     
     func hideMenu() {
         guard let window = menuWindow else { return }
         NSLog("🔧 ShortcutMenuController: Hiding menu (orderOut)")
+
+        // Remove event monitor
+        removeClickOutsideMonitor()
 
         // Hide the window without destroying it immediately to avoid autorelease-pool crashes
         window.orderOut(nil)
@@ -98,8 +103,35 @@ class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         NSLog("🔧 ShortcutMenuController: Window will close")
         // Clean up references when window closes
+        removeClickOutsideMonitor()
         menuWindow = nil
         // Keep hostingController retained to avoid potential SwiftUI deallocation timing crash
+    }
+    
+    // MARK: - Click Outside Monitor
+    private func setupClickOutsideMonitor() {
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self = self, let window = self.menuWindow else { return }
+            
+            // Get click location in screen coordinates
+            let clickLocation = NSEvent.mouseLocation
+            let windowFrame = window.frame
+            
+            // Check if click is outside the window
+            if !windowFrame.contains(clickLocation) {
+                NSLog("🔧 ShortcutMenuController: Click outside detected, hiding menu")
+                DispatchQueue.main.async {
+                    self.hideMenu()
+                }
+            }
+        }
+    }
+    
+    private func removeClickOutsideMonitor() {
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
     }
     
     private func executeShortcut(_ shortcut: ShortcutConfiguration) {
@@ -148,6 +180,7 @@ class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
     
     
     deinit {
+        removeClickOutsideMonitor()
         hideMenu()
     }
 }
