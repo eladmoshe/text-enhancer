@@ -10,52 +10,164 @@ struct ShortcutMenuView: View {
     @State private var hoveredIndex: Int? = nil
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
             // Header
-            Text("Select Shortcut (\(shortcuts.count) available)")
-                .font(.headline)
-                .padding()
-            
-            // Shortcuts list - using regular VStack instead of LazyVStack
-            VStack(spacing: 4) {
-                ForEach(0..<shortcuts.count, id: \.self) { index in
-                    let shortcut = shortcuts[index]
-                    Button(action: {
-                        NSLog("🔧 Button clicked for: \(shortcut.name)")
-                        selectShortcut(at: index)
-                    }) {
-                        HStack {
-                            Text("\(index + 1). \(shortcut.name)")
-                                .foregroundColor(.black)
-                            Spacer()
-                            Text(shortcut.provider.displayName)
-                                .foregroundColor(.gray)
-                                .font(.caption)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(.plain)
-                    .onAppear {
-                        NSLog("🔧 Button appeared for: \(shortcut.name)")
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            
-            // Footer
-            Button("Close") {
-                NSLog("🔧 Close button clicked")
-                onDismiss()
+            HStack {
+                Text("Quick Launch")
+                    .font(.title)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text("\(shortcuts.count) shortcuts")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
             .padding()
+            .background(Color(.controlBackgroundColor))
+            
+            // Shortcuts list
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(0..<shortcuts.count, id: \.self) { index in
+                        let shortcut = shortcuts[index]
+                        Button(action: {
+                            NSLog("🔧 Button clicked for: \(shortcut.name)")
+                            selectShortcut(at: index)
+                        }) {
+                            HStack(spacing: 12) {
+                                // Number indicator
+                                Text("\(index + 1)")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .fontWeight(.medium)
+                                    .foregroundColor(hoveredIndex == index ? .white : .secondary)
+                                    .frame(width: 20, height: 20)
+                                    .background(
+                                        Circle()
+                                            .fill(hoveredIndex == index ? Color.accentColor : Color.clear)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(hoveredIndex == index ? Color.clear : Color.gray.opacity(0.3), lineWidth: 1)
+                                            )
+                                    )
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    // Shortcut name
+                                    Text(shortcut.name)
+                                        .font(.title3)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.primary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    
+                                    // Provider and model tags
+                                    HStack(spacing: 8) {
+                                        // Provider tag
+                                        let providerTextColor: Color = {
+                                            switch shortcut.provider {
+                                            case .claude:
+                                                return .orange
+                                            case .openai:
+                                                return .black
+                                            }
+                                        }()
+                                        let providerBackground: Color = {
+                                            switch shortcut.provider {
+                                            case .claude:
+                                                return .orange.opacity(0.1)
+                                            case .openai:
+                                                return .clear
+                                            }
+                                        }()
+
+                                        let tagContent = HStack(spacing: 4) {
+                                            Circle()
+                                                .fill(providerTextColor)
+                                                .frame(width: 6, height: 6)
+                                            Text(shortcut.provider.displayName)
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                            Text("•")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                            Text(formatModelName(shortcut.model))
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+
+                                        if shortcut.provider == .openai {
+                                            tagContent
+                                                .background(Color.white)
+                                                .foregroundColor(.black)
+                                                .cornerRadius(10)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 10)
+                                                        .stroke(Color.gray.opacity(0.5), lineWidth: 0.5)
+                                                )
+                                        } else {
+                                            tagContent
+                                                .background(providerBackground)
+                                                .foregroundColor(providerTextColor)
+                                                .cornerRadius(10)
+                                        }
+                                        
+                                        if shortcut.effectiveIncludeScreenshot {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "camera")
+                                                    .font(.caption2)
+                                                Text("Screenshot")
+                                                    .font(.caption)
+                                                    .fontWeight(.medium)
+                                            }
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .background(Color.blue.opacity(0.1))
+                                            .foregroundColor(.blue)
+                                            .cornerRadius(10)
+                                        }
+                                        
+                                        Spacer()
+                                    }
+                                    
+                                    // Prompt preview
+                                    Text(shortcut.prompt)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(2)
+                                        .truncationMode(.tail)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(hoveredIndex == index ? Color.accentColor.opacity(0.1) : Color(.controlBackgroundColor).opacity(0.3))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(hoveredIndex == index ? Color.accentColor.opacity(0.5) : Color.clear, lineWidth: 1)
+                                    )
+                            )
+                            .scaleEffect(hoveredIndex == index ? 1.02 : 1.0)
+                            .animation(.easeInOut(duration: 0.15), value: hoveredIndex)
+                        }
+                        .buttonStyle(.plain)
+                        .onHover { hovering in
+                            hoveredIndex = hovering ? index : nil
+                        }
+                        .onAppear {
+                            NSLog("🔧 Button appeared for: \(shortcut.name)")
+                        }
+                    }
+                }
+                .padding()
+            }
         }
         .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 10)
-        .frame(width: 400, height: 300)
+        .frame(width: 500, height: 400)
         .onAppear {
             NSLog("🔧 ShortcutMenuView: Appeared with \(shortcuts.count) shortcuts")
             for (index, shortcut) in shortcuts.enumerated() {
@@ -68,6 +180,21 @@ struct ShortcutMenuView: View {
         guard index >= 0 && index < shortcuts.count else { return }
         NSLog("🔧 ShortcutMenuView: Selected shortcut at index \(index): \(shortcuts[index].name)")
         onSelectShortcut(shortcuts[index])
+    }
+    
+    private func formatModelName(_ model: String) -> String {
+        switch model {
+        case "claude-3-5-sonnet-20241022": return "Sonnet"
+        case "claude-opus-4-20250514": return "Opus"
+        case "gpt-4o": return "4o"
+        case "gpt-4o-mini": return "4o mini"
+        case "gpt-4-turbo": return "4 Turbo"
+        case "gpt-4": return "4"
+        case "gpt-3.5-turbo": return "3.5 Turbo"
+        case "o1-preview": return "o1 preview"
+        case "o1-mini": return "o1 mini"
+        default: return model
+        }
     }
 }
 
