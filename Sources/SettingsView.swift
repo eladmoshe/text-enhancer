@@ -73,16 +73,23 @@ struct SettingsView: View {
                                     .foregroundColor(.secondary)
                                     .padding(.vertical, 8)
                             } else {
-                                ForEach(shortcuts, id: \.id) { shortcut in
-                                    ShortcutRowView(
-                                        shortcut: shortcut,
-                                        onEdit: { editingShortcut = shortcut },
-                                        onDelete: {
-                                            deleteShortcut(shortcut)
-                                            saveConfiguration()
-                                        }
-                                    )
+                                List {
+                                    ForEach(shortcuts, id: \.id) { shortcut in
+                                        ShortcutRowView(
+                                            shortcut: shortcut,
+                                            onEdit: { editingShortcut = shortcut },
+                                            onDelete: {
+                                                deleteShortcut(shortcut)
+                                                saveConfiguration()
+                                            }
+                                        )
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                    }
+                                    .onMove(perform: moveShortcut)
                                 }
+                                .listStyle(.plain)
+                                .frame(minHeight: CGFloat(shortcuts.count * 80))
                             }
                         }
                         .padding(.vertical, 4)
@@ -410,6 +417,11 @@ struct SettingsView: View {
         shortcuts.removeAll { $0.id == shortcut.id }
     }
     
+    private func moveShortcut(from source: IndexSet, to destination: Int) {
+        shortcuts.move(fromOffsets: source, toOffset: destination)
+        saveConfiguration()
+    }
+    
     private func saveConfiguration() {
         let newConfig = AppConfiguration(
             shortcuts: shortcuts,
@@ -445,6 +457,13 @@ struct ShortcutRowView: View {
     
     var body: some View {
         HStack {
+            // Drag handle
+            Image(systemName: "line.3.horizontal")
+                .foregroundColor(.secondary)
+                .font(.caption)
+                .frame(width: 20)
+                .padding(.trailing, 8)
+            
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(shortcut.name)
