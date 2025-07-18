@@ -1,6 +1,90 @@
 import AppKit
 import ApplicationServices
 
+// MARK: - URLSession Protocol for Testing
+
+protocol URLSessionProtocol {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: URLSessionProtocol {}
+
+// MARK: - Retry Controller
+
+class RetryController {
+    let maxAttempts: Int = 3
+    private(set) var currentAttempt: Int = 0
+    
+    init() {
+        self.currentAttempt = 0
+    }
+    
+    func reset() {
+        currentAttempt = 0
+    }
+    
+    func incrementAttempt() -> Int {
+        currentAttempt += 1
+        return currentAttempt
+    }
+    
+    var hasAttemptsRemaining: Bool {
+        return currentAttempt < maxAttempts
+    }
+    
+    func delay(forAttempt attempt: Int) -> TimeInterval {
+        switch attempt {
+        case 1: return 0.0  // First retry immediately
+        case 2: return 2.0  // Second retry after 2 seconds
+        default: return 0.0 // No more retries
+        }
+    }
+    
+    func shouldRetry(error: Error) -> Bool {
+        // Check for Claude/OpenAI specific errors
+        if let claudeError = error as? ClaudeError {
+            return claudeError.isNetworkRetryable
+        }
+        
+        if let openaiError = error as? OpenAIError {
+            return openaiError.isNetworkRetryable
+        }
+        
+        // Check for URLSession errors
+        if let urlError = error as? URLError {
+            return isRetryableURLError(urlError)
+        }
+        
+        return false
+    }
+    
+    private func isRetryableURLError(_ error: URLError) -> Bool {
+        switch error.code {
+        case .timedOut,
+             .cannotFindHost,
+             .cannotConnectToHost,
+             .networkConnectionLost,
+             .notConnectedToInternet,
+             .dnsLookupFailed:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
+// MARK: - Notifications
+
+extension Notification.Name {
+    static let retryingOperation = Notification.Name("retryingOperation")
+}
+
+struct RetryNotificationInfo {
+    let attempt: Int
+    let maxAttempts: Int
+    let provider: String
+}
+
 // MARK: - Protocols
 
 protocol TextSelectionProvider {

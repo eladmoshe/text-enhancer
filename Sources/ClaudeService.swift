@@ -2,31 +2,91 @@ import Foundation
 
 class ClaudeService: ObservableObject {
     private let configManager: ConfigurationManager
-    private let urlSession: URLSession
+    private let urlSession: URLSessionProtocol
     private let cacheManager: ModelCacheManager
     private let apiURL = "https://api.anthropic.com/v1/messages"
     private let modelsURL = "https://api.anthropic.com/v1/models"
     private let maxTokens = 1000
     private let timeout: TimeInterval = 30.0
     
-    init(configManager: ConfigurationManager, urlSession: URLSession = .shared, cacheManager: ModelCacheManager = ModelCacheManager()) {
+    init(configManager: ConfigurationManager, urlSession: URLSessionProtocol? = nil, cacheManager: ModelCacheManager = ModelCacheManager()) {
         self.configManager = configManager
         self.cacheManager = cacheManager
         
-        // Create a custom URL session with timeout configuration
-        let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 30.0
-        configuration.timeoutIntervalForResource = 60.0
-        configuration.waitsForConnectivity = false
-        
-        self.urlSession = urlSession == .shared ? URLSession(configuration: configuration) : urlSession
+        if let urlSession = urlSession {
+            self.urlSession = urlSession
+        } else {
+            // Create a custom URL session with timeout configuration
+            let configuration = URLSessionConfiguration.default
+            configuration.timeoutIntervalForRequest = 30.0
+            configuration.timeoutIntervalForResource = 60.0
+            configuration.waitsForConnectivity = false
+            
+            self.urlSession = URLSession(configuration: configuration)
+        }
     }
     
     func enhanceText(_ text: String, with prompt: String, using model: String) async throws -> String {
-        return try await enhanceText(text, with: prompt, using: model, screenContext: nil)
+        return try await enhanceTextWithRetry(text, with: prompt, using: model, screenContext: nil)
     }
     
     func enhanceText(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
+        return try await enhanceTextWithRetry(text, with: prompt, using: model, screenContext: screenContext)
+    }
+    
+    // MARK: - Retry Logic
+    
+    private func enhanceTextWithRetry(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
+        let retryController = RetryController()
+        var lastError: Error?
+        
+        while retryController.hasAttemptsRemaining {
+            let attempt = retryController.incrementAttempt()
+            
+            do {
+                return try await performEnhanceText(text, with: prompt, using: model, screenContext: screenContext)
+            } catch {
+                lastError = error
+                
+                // Check if this error should be retried
+                if !retryController.shouldRetry(error: error) {
+                    print("❌ ClaudeService: Non-retryable error on attempt \(attempt): \(error)")
+                    throw error
+                }
+                
+                // Check if we have more attempts
+                if !retryController.hasAttemptsRemaining {
+                    print("❌ ClaudeService: Final attempt (\(attempt)) failed: \(error)")
+                    break
+                }
+                
+                // Post retry notification
+                let retryInfo = RetryNotificationInfo(
+                    attempt: attempt + 1, // Next attempt number
+                    maxAttempts: retryController.maxAttempts,
+                    provider: "Claude"
+                )
+                NotificationCenter.default.post(
+                    name: .retryingOperation,
+                    object: nil,
+                    userInfo: ["retryInfo": retryInfo]
+                )
+                
+                print("⚠️ ClaudeService: Attempt \(attempt) failed, retrying in \(retryController.delay(forAttempt: attempt))s: \(error)")
+                
+                // Wait before retrying
+                let delay = retryController.delay(forAttempt: attempt)
+                if delay > 0 {
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                }
+            }
+        }
+        
+        // If we get here, all attempts failed
+        throw lastError ?? ClaudeError.invalidResponse
+    }
+    
+    private func performEnhanceText(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
         print("🔧 ClaudeService: Enhancing text (\(text.count) characters)")
         if screenContext != nil {
             print("🔧 ClaudeService: Including screen context")

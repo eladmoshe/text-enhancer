@@ -141,10 +141,109 @@ final class TextProcessorTests: XCTestCase {
     }
     
     func test_textProcessorInitialization() {
-        // Given: A text processor with mocked dependencies
         // When: Initialize TextProcessor
         // Then: Should initialize without error
         XCTAssertNotNil(textProcessor)
+    }
+    
+    // MARK: - RetryController Tests
+    
+    func test_retryController_initialization() {
+        // Given/When: Create a new RetryController
+        let retryController = RetryController()
+        
+        // Then: Should have correct initial state
+        XCTAssertEqual(retryController.maxAttempts, 3)
+        XCTAssertEqual(retryController.currentAttempt, 0)
+        XCTAssertTrue(retryController.hasAttemptsRemaining)
+    }
+    
+    func test_retryController_incrementAttempt() {
+        // Given: A new RetryController
+        let retryController = RetryController()
+        
+        // When: Incrementing attempts
+        let attempt1 = retryController.incrementAttempt()
+        let attempt2 = retryController.incrementAttempt()
+        let attempt3 = retryController.incrementAttempt()
+        
+        // Then: Should track attempts correctly
+        XCTAssertEqual(attempt1, 1)
+        XCTAssertEqual(attempt2, 2)
+        XCTAssertEqual(attempt3, 3)
+        XCTAssertEqual(retryController.currentAttempt, 3)
+        XCTAssertFalse(retryController.hasAttemptsRemaining)
+    }
+    
+    func test_retryController_delayForAttempt() {
+        // Given: A RetryController
+        let retryController = RetryController()
+        
+        // When/Then: Check delay for different attempts
+        XCTAssertEqual(retryController.delay(forAttempt: 1), 0.0)  // First retry immediate
+        XCTAssertEqual(retryController.delay(forAttempt: 2), 2.0)  // Second retry after 2s
+        XCTAssertEqual(retryController.delay(forAttempt: 3), 0.0)  // No more retries
+    }
+    
+    func test_retryController_shouldRetryNetworkErrors() {
+        // Given: A RetryController
+        let retryController = RetryController()
+        
+        // When/Then: Should retry network errors
+        XCTAssertTrue(retryController.shouldRetry(error: URLError(.timedOut)))
+        XCTAssertTrue(retryController.shouldRetry(error: URLError(.cannotFindHost)))
+        XCTAssertTrue(retryController.shouldRetry(error: URLError(.networkConnectionLost)))
+        XCTAssertTrue(retryController.shouldRetry(error: URLError(.notConnectedToInternet)))
+        
+        // When/Then: Should not retry non-network errors
+        XCTAssertFalse(retryController.shouldRetry(error: URLError(.badURL)))
+        XCTAssertFalse(retryController.shouldRetry(error: URLError(.cancelled)))
+    }
+    
+    func test_retryController_shouldRetryClaudeErrors() {
+        // Given: A RetryController
+        let retryController = RetryController()
+        
+        // When/Then: Should retry retryable Claude errors
+        XCTAssertTrue(retryController.shouldRetry(error: ClaudeError.apiError(500, Data())))
+        XCTAssertTrue(retryController.shouldRetry(error: ClaudeError.apiError(502, Data())))
+        XCTAssertTrue(retryController.shouldRetry(error: ClaudeError.apiError(429, Data())))
+        XCTAssertTrue(retryController.shouldRetry(error: ClaudeError.invalidResponse))
+        
+        // When/Then: Should not retry non-retryable Claude errors
+        XCTAssertFalse(retryController.shouldRetry(error: ClaudeError.missingApiKey))
+        XCTAssertFalse(retryController.shouldRetry(error: ClaudeError.apiError(401, Data())))
+        XCTAssertFalse(retryController.shouldRetry(error: ClaudeError.noContent))
+    }
+    
+    func test_retryController_shouldRetryOpenAIErrors() {
+        // Given: A RetryController
+        let retryController = RetryController()
+        
+        // When/Then: Should retry retryable OpenAI errors
+        XCTAssertTrue(retryController.shouldRetry(error: OpenAIError.apiError(500, Data())))
+        XCTAssertTrue(retryController.shouldRetry(error: OpenAIError.apiError(502, Data())))
+        XCTAssertTrue(retryController.shouldRetry(error: OpenAIError.apiError(429, Data())))
+        XCTAssertTrue(retryController.shouldRetry(error: OpenAIError.invalidResponse))
+        
+        // When/Then: Should not retry non-retryable OpenAI errors
+        XCTAssertFalse(retryController.shouldRetry(error: OpenAIError.missingApiKey))
+        XCTAssertFalse(retryController.shouldRetry(error: OpenAIError.apiError(401, Data())))
+        XCTAssertFalse(retryController.shouldRetry(error: OpenAIError.noContent))
+    }
+    
+    func test_retryController_reset() {
+        // Given: A RetryController with some attempts
+        let retryController = RetryController()
+        _ = retryController.incrementAttempt()
+        _ = retryController.incrementAttempt()
+        
+        // When: Resetting
+        retryController.reset()
+        
+        // Then: Should return to initial state
+        XCTAssertEqual(retryController.currentAttempt, 0)
+        XCTAssertTrue(retryController.hasAttemptsRemaining)
     }
     
     func test_processSelectedText_noAccessibilityPermissions() async {

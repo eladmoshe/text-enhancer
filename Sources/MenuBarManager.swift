@@ -12,6 +12,8 @@ class MenuBarManager: ObservableObject {
     private var animationPhase = 0
     private var permissionCheckTimer: Timer?
     private var lastAccessibilityStatus = false
+    @Published var isRetrying = false
+    private var retryInfo: RetryNotificationInfo?
     
     init(shortcutManager: ShortcutManager, configManager: ConfigurationManager, textProcessor: TextProcessor) {
         self.shortcutManager = shortcutManager
@@ -30,6 +32,14 @@ class MenuBarManager: ObservableObject {
             self,
             selector: #selector(processingFinished),
             name: .textProcessingFinished,
+            object: nil
+        )
+        
+        // Listen for retry operations
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(retryingOperation),
+            name: .retryingOperation,
             object: nil
         )
         
@@ -442,9 +452,22 @@ class MenuBarManager: ObservableObject {
     @objc private func processingFinished() {
         DispatchQueue.main.async {
             self.isProcessing = false
+            self.isRetrying = false  // Reset retry state when processing finishes
+            self.retryInfo = nil
             self.stopProcessingAnimation()
             self.updateStatusIcon()
             self.showNotification(title: "TextEnhancer", message: "Text enhancement complete!", isStarting: false)
+        }
+    }
+    
+    @objc private func retryingOperation(_ notification: Notification) {
+        DispatchQueue.main.async {
+            if let retryInfo = notification.userInfo?["retryInfo"] as? RetryNotificationInfo {
+                self.isRetrying = true
+                self.retryInfo = retryInfo
+                self.updateStatusIcon()
+                print("🔄 MenuBarManager: Retrying \(retryInfo.provider) operation (attempt \(retryInfo.attempt) of \(retryInfo.maxAttempts))")
+            }
         }
     }
     
@@ -471,25 +494,48 @@ class MenuBarManager: ObservableObject {
         
         animationPhase = (animationPhase + 1) % 4
         
-        // Create animated icons
-        let animationIcons = ["⏳", "⌛", "⏳", "⌛"]
-        let animationSymbols = [
-            "wand.and.stars.inverse",
-            "sparkles",
-            "wand.and.rays.inverse",
-            "sparkles"
-        ]
-        
-        // Try to use SF Symbols first
-        if let image = NSImage(systemSymbolName: animationSymbols[animationPhase], accessibilityDescription: "Processing...") {
-            button.image = image
-            button.image?.size = NSSize(width: 16, height: 16)
-            button.image?.isTemplate = true
-            button.title = ""
+        if isRetrying {
+            // Retry animation - rotating arrows
+            let retryIcons = ["🔄", "🔁", "🔄", "🔁"]
+            let retrySymbols = [
+                "arrow.triangle.2.circlepath",
+                "arrow.clockwise",
+                "arrow.triangle.2.circlepath",
+                "arrow.counterclockwise"
+            ]
+            
+            // Try to use SF Symbols first
+            if let image = NSImage(systemSymbolName: retrySymbols[animationPhase], accessibilityDescription: "Retrying...") {
+                button.image = image
+                button.image?.size = NSSize(width: 16, height: 16)
+                button.image?.isTemplate = true
+                button.title = ""
+            } else {
+                // Fallback to text animation
+                button.image = nil
+                button.title = retryIcons[animationPhase]
+            }
         } else {
-            // Fallback to text animation
-            button.image = nil
-            button.title = animationIcons[animationPhase]
+            // Normal processing animation
+            let animationIcons = ["⏳", "⌛", "⏳", "⌛"]
+            let animationSymbols = [
+                "wand.and.stars.inverse",
+                "sparkles",
+                "wand.and.rays.inverse",
+                "sparkles"
+            ]
+            
+            // Try to use SF Symbols first
+            if let image = NSImage(systemSymbolName: animationSymbols[animationPhase], accessibilityDescription: "Processing...") {
+                button.image = image
+                button.image?.size = NSSize(width: 16, height: 16)
+                button.image?.isTemplate = true
+                button.title = ""
+            } else {
+                // Fallback to text animation
+                button.image = nil
+                button.title = animationIcons[animationPhase]
+            }
         }
     }
     
@@ -503,8 +549,20 @@ class MenuBarManager: ObservableObject {
         
         let accessibilityEnabled = AXIsProcessTrusted()
         
+        // Set tooltip based on current state
+        updateTooltip()
+        
         // Use appropriate SF Symbols with fallbacks
-        if isProcessing {
+        if isRetrying {
+            // Show retry-specific icon
+            if let image = NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: "Retrying...") {
+                button.image = image
+                button.image?.size = NSSize(width: 16, height: 16)
+                button.image?.isTemplate = true
+            } else {
+                button.title = "🔄"
+            }
+        } else if isProcessing {
             // This will be overridden by animation, but set initial state
             if let image = NSImage(systemSymbolName: "wand.and.stars.inverse", accessibilityDescription: "Processing...") {
                 button.image = image
@@ -547,6 +605,24 @@ class MenuBarManager: ObservableObject {
         }
         
         button.appearsDisabled = false
+    }
+    
+    private func updateTooltip() {
+        guard let statusItem = self.statusItem,
+              let button = statusItem.button else { return }
+        
+        if isRetrying, let retryInfo = self.retryInfo {
+            button.toolTip = "Connection issue - retrying \(retryInfo.provider)... (\(retryInfo.attempt)/\(retryInfo.maxAttempts))"
+        } else if isProcessing {
+            button.toolTip = "Processing text... (click to cancel)"
+        } else {
+            let accessibilityEnabled = AXIsProcessTrusted()
+            if !accessibilityEnabled {
+                button.toolTip = "TextEnhancer - Accessibility permissions required"
+            } else {
+                button.toolTip = "TextEnhancer - Ready"
+            }
+        }
     }
     
     private func requestNotificationPermissions() {

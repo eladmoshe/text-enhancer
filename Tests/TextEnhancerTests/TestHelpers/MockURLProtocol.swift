@@ -1,4 +1,62 @@
 import Foundation
+@testable import TextEnhancer
+
+// MARK: - MockURLSession for Retry Testing
+
+class MockURLSession: URLSessionProtocol {
+    var shouldFail = false
+    var shouldFailUntilAttempt: Int?
+    var error: Error?
+    var responseStatusCode: Int = 200
+    var responseData: Data = Data()
+    var requestCount = 0
+    
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        requestCount += 1
+        
+        // Check if we should fail until a certain attempt
+        if let failUntilAttempt = shouldFailUntilAttempt {
+            if requestCount < failUntilAttempt {
+                if let error = error {
+                    throw error
+                } else {
+                    throw URLError(.networkConnectionLost)
+                }
+            }
+        } else if shouldFail {
+            if let error = error {
+                throw error
+            } else {
+                throw URLError(.networkConnectionLost)
+            }
+        }
+        
+        // Create mock response
+        guard let url = request.url else {
+            throw URLError(.badURL)
+        }
+        
+        let response = HTTPURLResponse(
+            url: url,
+            statusCode: responseStatusCode,
+            httpVersion: nil,
+            headerFields: nil
+        )!
+        
+        return (responseData, response)
+    }
+    
+    func reset() {
+        requestCount = 0
+        shouldFail = false
+        shouldFailUntilAttempt = nil
+        error = nil
+        responseStatusCode = 200
+        responseData = Data()
+    }
+}
+
+// MARK: - MockURLProtocol
 
 class MockURLProtocol: URLProtocol {
     static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data?))?

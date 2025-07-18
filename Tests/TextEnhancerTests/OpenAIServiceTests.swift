@@ -10,6 +10,9 @@ final class OpenAIServiceTests: XCTestCase {
         super.setUp()
         tempDir = try! TemporaryDirectory()
         
+        // Initialize configManager with test API key
+        configManager = createConfigManager(with: "test-openai-api-key")
+        
         // Create a mock URL session configuration
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockURLProtocol.self]
@@ -223,5 +226,123 @@ final class OpenAIServiceTests: XCTestCase {
         XCTAssertEqual(requestBody.messages[0].role, "user")
         XCTAssertTrue(requestBody.messages[0].content.contains("Test prompt"))
         XCTAssertTrue(requestBody.messages[0].content.contains("Test text"))
+    }
+    
+    // MARK: - Retry Tests
+    
+    func test_retryMechanism_networkError_retriesThreeTimes() async {
+        // Given: A service with a mock session that always fails with network error
+        let mockSession = MockURLSession()
+        mockSession.shouldFail = true
+        mockSession.error = URLError(.timedOut)
+        
+        let service = OpenAIService(configManager: configManager, urlSession: mockSession)
+        
+        // When: Calling enhanceText
+        do {
+            _ = try await service.enhanceText("test", with: "test", using: "gpt-4")
+            XCTFail("Should have thrown an error")
+        } catch {
+            // Then: Should have attempted exactly 3 times
+            XCTAssertEqual(mockSession.requestCount, 3)
+            XCTAssertTrue(error is URLError)
+        }
+    }
+    
+    func test_retryMechanism_apiKeyError_doesNotRetry() async {
+        // Given: A service with empty API key (non-retryable error)
+        // Modify the existing configuration to have empty OpenAI API key
+        let currentConfig = configManager.configuration
+        let emptyOpenAIConfig = APIProviderConfig(apiKey: "", model: "gpt-4", enabled: true)
+        let modifiedApiProviders = APIProviders(claude: currentConfig.apiProviders.claude, openai: emptyOpenAIConfig)
+        
+        let emptyKeyConfig = AppConfiguration(
+            shortcuts: currentConfig.shortcuts,
+            maxTokens: currentConfig.maxTokens,
+            timeout: currentConfig.timeout,
+            showStatusIcon: currentConfig.showStatusIcon,
+            enableNotifications: currentConfig.enableNotifications,
+            autoSave: currentConfig.autoSave,
+            logLevel: currentConfig.logLevel,
+            apiProviders: modifiedApiProviders
+        )
+        try? configManager.saveConfiguration(emptyKeyConfig)
+        
+        let mockSession = MockURLSession()
+        let service = OpenAIService(configManager: configManager, urlSession: mockSession)
+        
+        // When: Calling enhanceText
+        do {
+            _ = try await service.enhanceText("test", with: "test", using: "gpt-4")
+            XCTFail("Should have thrown an error")
+        } catch {
+            // Then: Should not have made any network requests (fails before network call)
+            XCTAssertEqual(mockSession.requestCount, 0)
+            XCTAssertTrue(error is OpenAIError)
+        }
+    }
+    
+    func test_retryMechanism_serverError_retriesThreeTimes() async {
+        // Given: A service with a mock session that returns 500 error
+        let mockSession = MockURLSession()
+        mockSession.shouldFail = false
+        mockSession.responseStatusCode = 500
+        mockSession.responseData = "Server Error".data(using: .utf8)!
+        
+        let service = OpenAIService(configManager: configManager, urlSession: mockSession)
+        
+        // When: Calling enhanceText
+        do {
+            _ = try await service.enhanceText("test", with: "test", using: "gpt-4")
+            XCTFail("Should have thrown an error")
+        } catch {
+            // Then: Should have attempted exactly 3 times
+            XCTAssertEqual(mockSession.requestCount, 3)
+            if case OpenAIError.apiError(let statusCode, _) = error {
+                XCTAssertEqual(statusCode, 500)
+            } else {
+                XCTFail("Expected OpenAIError.apiError")
+            }
+        }
+    }
+    
+    func test_retryMechanism_successOnSecondAttempt() async {
+        // Given: A service that fails once then succeeds
+        let mockSession = MockURLSession()
+        mockSession.shouldFailUntilAttempt = 2  // Fail on first attempt, succeed on second
+        mockSession.error = URLError(.networkConnectionLost)
+        
+        // Configure success response for when it succeeds
+        let successResponse = """
+        {
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": "{\\"enhancedText\\": \\"Enhanced text\\"}"
+                    }
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 5,
+                "total_tokens": 15
+            }
+        }
+        """
+        mockSession.responseData = successResponse.data(using: .utf8)!
+        
+        let service = OpenAIService(configManager: configManager, urlSession: mockSession)
+        
+        // When: Calling enhanceText
+        do {
+            let result = try await service.enhanceText("test", with: "test", using: "gpt-4")
+            
+            // Then: Should succeed and have made exactly 2 attempts
+            XCTAssertEqual(result, "Enhanced text")
+            XCTAssertEqual(mockSession.requestCount, 2)
+        } catch {
+            XCTFail("Should not have thrown an error: \(error)")
+        }
     }
 } 
