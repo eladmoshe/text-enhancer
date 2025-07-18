@@ -21,13 +21,13 @@ extension JSONParseError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidUTF8:
-            return "Invalid UTF-8 encoding in response"
+            return "⚠️ Invalid response encoding from API"
         case .noJSONFound:
-            return "No JSON content found in response"
+            return "⚠️ API returned unexpected response format"
         case .invalidJSON(let error):
-            return "Invalid JSON format: \(error.localizedDescription)"
+            return "⚠️ Invalid response format: \(error.localizedDescription)"
         case .missingRequiredField(let field):
-            return "Missing required field: \(field)"
+            return "⚠️ Incomplete response from API (missing: \(field))"
         }
     }
 }

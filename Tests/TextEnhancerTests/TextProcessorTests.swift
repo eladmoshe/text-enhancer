@@ -59,11 +59,22 @@ class MockPasteboardManager: PasteboardManager {
 
 class MockAlertPresenter: AlertPresenter {
     var mockErrorMessage: String?
+    var mockErrorTitle: String?
+    var mockErrorActions: [AlertAction] = []
     var showErrorCallCount = 0
+    
+    func showError(title: String, message: String, actions: [AlertAction]) async {
+        showErrorCallCount += 1
+        mockErrorTitle = title
+        mockErrorMessage = message
+        mockErrorActions = actions
+    }
     
     func showError(_ message: String) async {
         showErrorCallCount += 1
         mockErrorMessage = message
+        mockErrorTitle = "TextEnhancer Error"
+        mockErrorActions = []
     }
 }
 
@@ -147,7 +158,7 @@ final class TextProcessorTests: XCTestCase {
         XCTAssertEqual(mockAccessibilityChecker.isAccessibilityEnabledCallCount, 2) // Called twice (initial check + recheck)
         XCTAssertEqual(mockAccessibilityChecker.requestAccessibilityPermissionsCallCount, 1)
         XCTAssertEqual(mockAlertPresenter.showErrorCallCount, 1)
-        XCTAssertTrue(mockAlertPresenter.mockErrorMessage?.contains("Accessibility permissions are required") ?? false)
+        XCTAssertTrue(mockAlertPresenter.mockErrorMessage?.contains("Accessibility permission is required") ?? false)
     }
     
     func test_processSelectedText_noTextSelected() async {
@@ -161,7 +172,11 @@ final class TextProcessorTests: XCTestCase {
         // Then: Should show error about no text selected
         XCTAssertEqual(mockTextSelectionProvider.getSelectedTextCallCount, 1)
         XCTAssertEqual(mockAlertPresenter.showErrorCallCount, 1)
-        XCTAssertEqual(mockAlertPresenter.mockErrorMessage, "No text selected")
+        XCTAssertEqual(mockAlertPresenter.mockErrorMessage, """
+            Please select some text before using this shortcut.
+            
+            Tip: Highlight the text you want to enhance, then use the shortcut.
+            """)
     }
     
     func test_processSelectedText_emptyTextSelected() async {
@@ -175,7 +190,11 @@ final class TextProcessorTests: XCTestCase {
         // Then: Should show error about no text selected
         XCTAssertEqual(mockTextSelectionProvider.getSelectedTextCallCount, 1)
         XCTAssertEqual(mockAlertPresenter.showErrorCallCount, 1)
-        XCTAssertEqual(mockAlertPresenter.mockErrorMessage, "No text selected")
+        XCTAssertEqual(mockAlertPresenter.mockErrorMessage, """
+            Please select some text before using this shortcut.
+            
+            Tip: Highlight the text you want to enhance, then use the shortcut.
+            """)
     }
     
     func test_processSelectedText_noApiKeyConfigured() async {

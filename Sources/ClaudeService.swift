@@ -323,20 +323,89 @@ enum ClaudeError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingApiKey:
-            return "Claude API key is missing. Please set it in Settings."
+            return """
+            🔑 Claude API key missing or invalid
+            
+            Fix: Open Settings → Enter your Claude API key
+            Get a key at: console.anthropic.com
+            """
         case .invalidURL:
-            return "Invalid API URL"
+            return "⚠️ Invalid API URL configuration"
         case .invalidResponse:
-            return "Invalid response from Claude API"
+            return "⚠️ Invalid response from Claude API"
         case .apiError(let statusCode, let data):
-            if let errorString = String(data: data, encoding: .utf8) {
-                return "Claude API error (\(statusCode)): \(errorString)"
+            if statusCode == 401 {
+                return """
+                🔑 Claude API key invalid
+                
+                Your API key appears to be incorrect or expired.
+                
+                Fix: Check your API key at console.anthropic.com
+                Then update it in Settings below
+                """
+            } else if statusCode == 429 {
+                return """
+                ⏱️ Rate limit exceeded
+                
+                Too many requests to Claude API.
+                Wait a moment and try again.
+                """
+            } else if statusCode >= 500 {
+                return """
+                🌐 Claude API temporarily unavailable
+                
+                Server error (HTTP \(statusCode)).
+                This usually resolves quickly.
+                """
+            } else {
+                if let errorString = String(data: data, encoding: .utf8) {
+                    return "⚠️ Claude API error (\(statusCode)): \(errorString)"
+                }
+                return "⚠️ Claude API error (\(statusCode))"
             }
-            return "Claude API error (\(statusCode))"
         case .noContent:
-            return "No content received from Claude API"
+            return "⚠️ No response content received from Claude API"
         case .invalidJSONResponse(let error):
-            return "Invalid JSON response from Claude: \(error.localizedDescription)"
+            return "⚠️ Invalid response format from Claude: \(error.localizedDescription)"
+        }
+    }
+    
+    // Helper to determine what actions should be available
+    var needsSettingsAction: Bool {
+        switch self {
+        case .missingApiKey, .apiError(401, _):
+            return true
+        default:
+            return false
+        }
+    }
+    
+    var isNetworkRetryable: Bool {
+        switch self {
+        case .apiError(let statusCode, _):
+            return statusCode >= 500 || statusCode == 429
+        case .invalidResponse:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    var technicalDetails: String {
+        switch self {
+        case .missingApiKey:
+            return "ClaudeError.missingApiKey"
+        case .invalidURL:
+            return "ClaudeError.invalidURL"
+        case .invalidResponse:
+            return "ClaudeError.invalidResponse"
+        case .apiError(let statusCode, let data):
+            let dataString = String(data: data, encoding: .utf8) ?? "No data"
+            return "ClaudeError.apiError(\(statusCode), \(dataString))"
+        case .noContent:
+            return "ClaudeError.noContent"
+        case .invalidJSONResponse(let error):
+            return "ClaudeError.invalidJSONResponse(\(error))"
         }
     }
 } 

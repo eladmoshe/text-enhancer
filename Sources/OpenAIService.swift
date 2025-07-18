@@ -412,20 +412,89 @@ extension OpenAIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingApiKey:
-            return "OpenAI API key is missing or empty"
+            return """
+            🔑 OpenAI API key missing or invalid
+            
+            Fix: Open Settings → Enter your OpenAI API key
+            Get a key at: platform.openai.com/account/api-keys
+            """
         case .invalidURL:
-            return "Invalid OpenAI API URL"
+            return "⚠️ Invalid OpenAI API URL configuration"
         case .invalidResponse:
-            return "Invalid response from OpenAI API"
+            return "⚠️ Invalid response from OpenAI API"
         case .apiError(let statusCode, let data):
-            if let errorMessage = String(data: data, encoding: .utf8) {
-                return "OpenAI API error (\(statusCode)): \(errorMessage)"
+            if statusCode == 401 {
+                return """
+                🔑 OpenAI API key invalid
+                
+                Your API key appears to be incorrect or expired.
+                
+                Fix: Check your API key at platform.openai.com
+                Then update it in Settings below
+                """
+            } else if statusCode == 429 {
+                return """
+                ⏱️ Rate limit exceeded
+                
+                Too many requests to OpenAI API.
+                Wait a moment and try again.
+                """
+            } else if statusCode >= 500 {
+                return """
+                🌐 OpenAI API temporarily unavailable
+                
+                Server error (HTTP \(statusCode)).
+                This usually resolves quickly.
+                """
+            } else {
+                if let errorMessage = String(data: data, encoding: .utf8) {
+                    return "⚠️ OpenAI API error (\(statusCode)): \(errorMessage)"
+                }
+                return "⚠️ OpenAI API error with status code: \(statusCode)"
             }
-            return "OpenAI API error with status code: \(statusCode)"
         case .noContent:
-            return "No content received from OpenAI API"
+            return "⚠️ No response content received from OpenAI API"
         case .invalidJSONResponse(let error):
-            return "Invalid JSON response from OpenAI: \(error.localizedDescription)"
+            return "⚠️ Invalid response format from OpenAI: \(error.localizedDescription)"
+        }
+    }
+    
+    // Helper to determine what actions should be available
+    var needsSettingsAction: Bool {
+        switch self {
+        case .missingApiKey, .apiError(401, _):
+            return true
+        default:
+            return false
+        }
+    }
+    
+    var isNetworkRetryable: Bool {
+        switch self {
+        case .apiError(let statusCode, _):
+            return statusCode >= 500 || statusCode == 429
+        case .invalidResponse:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    var technicalDetails: String {
+        switch self {
+        case .missingApiKey:
+            return "OpenAIError.missingApiKey"
+        case .invalidURL:
+            return "OpenAIError.invalidURL"
+        case .invalidResponse:
+            return "OpenAIError.invalidResponse"
+        case .apiError(let statusCode, let data):
+            let dataString = String(data: data, encoding: .utf8) ?? "No data"
+            return "OpenAIError.apiError(\(statusCode), \(dataString))"
+        case .noContent:
+            return "OpenAIError.noContent"
+        case .invalidJSONResponse(let error):
+            return "OpenAIError.invalidJSONResponse(\(error))"
         }
     }
 } 

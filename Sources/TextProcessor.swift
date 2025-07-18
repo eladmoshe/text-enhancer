@@ -21,8 +21,58 @@ protocol PasteboardManager {
     func simulateKeyPress(keyCode: CGKeyCode, modifiers: CGEventFlags)
 }
 
+// MARK: - Alert Action Types
+
+struct AlertAction {
+    let title: String
+    let style: NSAlert.Style
+    let handler: () -> Void
+    
+    init(title: String, style: NSAlert.Style = .informational, handler: @escaping () -> Void = {}) {
+        self.title = title
+        self.style = style
+        self.handler = handler
+    }
+    
+    // Convenience factory methods
+    static func ok() -> AlertAction {
+        return AlertAction(title: "OK")
+    }
+    
+    static func openSettings(configManager: ConfigurationManager) -> AlertAction {
+        return AlertAction(title: "Open Settings") {
+            DispatchQueue.main.async {
+                SettingsWindowManager.shared.showSettings(configManager: configManager)
+            }
+        }
+    }
+    
+    static func openSystemSettings(panel: String = "") -> AlertAction {
+        return AlertAction(title: "Open System Settings") {
+            let url: String
+            if panel.isEmpty {
+                url = "x-apple.systempreferences:"
+            } else {
+                url = "x-apple.systempreferences:\(panel)"
+            }
+            
+            if let settingsURL = URL(string: url) {
+                NSWorkspace.shared.open(settingsURL)
+            }
+        }
+    }
+    
+    static func copyError(_ errorDetails: String) -> AlertAction {
+        return AlertAction(title: "Copy Error Details") {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(errorDetails, forType: .string)
+        }
+    }
+}
+
 protocol AlertPresenter {
-    func showError(_ message: String) async
+    func showError(title: String, message: String, actions: [AlertAction]) async
+    func showError(_ message: String) async  // Legacy support
 }
 
 // MARK: - Default Implementations
@@ -133,14 +183,37 @@ class DefaultPasteboardManager: PasteboardManager {
 }
 
 class DefaultAlertPresenter: AlertPresenter {
+    private let configManager: ConfigurationManager
+    
+    init(configManager: ConfigurationManager) {
+        self.configManager = configManager
+    }
+    
     @MainActor
-    func showError(_ message: String) async {
+    func showError(title: String, message: String, actions: [AlertAction]) async {
         let alert = NSAlert()
-        alert.messageText = "TextEnhancer Error"
+        alert.messageText = title
         alert.informativeText = message
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
+        
+        // Add action buttons (in reverse order since NSAlert adds them right-to-left)
+        for action in actions.reversed() {
+            alert.addButton(withTitle: action.title)
+        }
+        
+        let response = alert.runModal()
+        
+        // Handle button responses (NSApplication.ModalResponse.alertFirstButtonReturn = 1000)
+        let buttonIndex = response.rawValue - 1000
+        if buttonIndex >= 0 && buttonIndex < actions.count {
+            actions[buttonIndex].handler()
+        }
+    }
+    
+    @MainActor
+    func showError(_ message: String) async {
+        // Legacy support - use simple OK dialog
+        await showError(title: "TextEnhancer Error", message: message, actions: [.ok()])
     }
 }
 
@@ -186,13 +259,13 @@ class TextProcessor: ObservableObject {
         textSelectionProvider: TextSelectionProvider = DefaultTextSelectionProvider(),
         textReplacer: TextReplacer? = nil,
         accessibilityChecker: AccessibilityChecker = DefaultAccessibilityChecker(),
-        alertPresenter: AlertPresenter = DefaultAlertPresenter(),
+        alertPresenter: AlertPresenter? = nil,
         screenCaptureService: ScreenCaptureService = ScreenCaptureService()
     ) {
         self.configManager = configManager
         self.textSelectionProvider = textSelectionProvider
         self.accessibilityChecker = accessibilityChecker
-        self.alertPresenter = alertPresenter
+        self.alertPresenter = alertPresenter ?? DefaultAlertPresenter(configManager: configManager)
         self.screenCaptureService = screenCaptureService
         
         // Initialize text replacer with default pasteboard manager if not provided
@@ -217,6 +290,35 @@ class TextProcessor: ObservableObject {
     func processSelectedText(with prompt: String, shortcut: ShortcutConfiguration) async {
         print("🔧 TextProcessor: Starting text processing with shortcut: \(shortcut.name)")
         await processSelectedText(with: prompt, using: shortcut.provider, model: shortcut.model)
+    }
+    
+    // Helper method to create appropriate alert actions based on error type
+    private func alertActions(for error: Error) -> [AlertAction] {
+        var actions: [AlertAction] = []
+        
+        // Check if this is a Claude error that needs settings
+        if let claudeError = error as? ClaudeError {
+            if claudeError.needsSettingsAction {
+                actions.append(.openSettings(configManager: configManager))
+            }
+            actions.append(.copyError(claudeError.technicalDetails))
+        }
+        // Check if this is an OpenAI error that needs settings
+        else if let openaiError = error as? OpenAIError {
+            if openaiError.needsSettingsAction {
+                actions.append(.openSettings(configManager: configManager))
+            }
+            actions.append(.copyError(openaiError.technicalDetails))
+        }
+        // For other errors, just provide copy option
+        else {
+            actions.append(.copyError(error.localizedDescription))
+        }
+        
+        // Always add OK button last
+        actions.append(.ok())
+        
+        return actions
     }
     
     func processSelectedText(with prompt: String, using provider: APIProvider, model: String) async {
@@ -264,33 +366,44 @@ class TextProcessor: ObservableObject {
                 
                 if !recheck {
                     // Give detailed diagnostic information
-                    let errorMessage = """
-                    Accessibility permissions are required but not working properly.
-                    
-                    Debug Info:
-                    • Basic trusted: \(basicTrusted)
-                    • Enhanced check: \(enhancedCheck)
-                    • Bundle ID: \(Bundle.main.bundleIdentifier ?? "none")
-                    • App Path: \(Bundle.main.bundlePath)
-                    
-                    Please:
-                    1. Open System Settings > Privacy & Security > Accessibility
-                    2. Remove TextEnhancer from the list (if present)
-                    3. Add TextEnhancer again by clicking the '+' button
-                    4. Make sure it's checked/enabled
-                    5. Try the shortcut again
-                    
-                    If this persists, try restarting the app.
-                    """
-                    
-                    await alertPresenter.showError(errorMessage)
+                    await alertPresenter.showError(
+                        title: "🔒 Accessibility Permission Required",
+                        message: """
+                        Accessibility permission is required for text selection and replacement.
+                        
+                        Debug Info:
+                        • Basic trusted: \(basicTrusted)
+                        • Enhanced check: \(enhancedCheck)
+                        • Bundle ID: \(Bundle.main.bundleIdentifier ?? "none")
+                        
+                        Fix: System Settings → Privacy & Security → Accessibility
+                        → Remove TextEnhancer (if present) → Add it again → Enable
+                        
+                        If this persists, try restarting the app.
+                        """,
+                        actions: [
+                            .openSystemSettings(panel: "com.apple.preference.security"),
+                            .ok()
+                        ]
+                    )
                     return
                 }
             }
             
             // Create appropriate API service
             guard let apiService = APIProviderFactory.createService(for: provider, configManager: configManager) else {
-                await alertPresenter.showError("API provider \(provider.displayName) is not configured or enabled.")
+                await alertPresenter.showError(
+                    title: "🔑 API Key Required",
+                    message: """
+                    \(provider.displayName) API key is not configured.
+                    
+                    Fix: Open Settings → Enter your \(provider.displayName) API key
+                    """,
+                    actions: [
+                        .openSettings(configManager: configManager),
+                        .ok()
+                    ]
+                )
                 return
             }
             
@@ -323,7 +436,15 @@ class TextProcessor: ObservableObject {
                     // Get selected text for normal shortcuts
                     guard let text = textSelectionProvider.getSelectedText(), !text.isEmpty else {
                         print("🔧 TextProcessor: No text selected and not screenshot-only mode")
-                        await alertPresenter.showError("No text selected")
+                        await alertPresenter.showError(
+                            title: "📝 No Text Selected",
+                            message: """
+                            Please select some text before using this shortcut.
+                            
+                            Tip: Highlight the text you want to enhance, then use the shortcut.
+                            """,
+                            actions: [.ok()]
+                        )
                         return
                     }
                     selectedText = text
@@ -343,7 +464,19 @@ class TextProcessor: ObservableObject {
                     } else {
                         print("⚠️ TextProcessor: Failed to capture screenshot")
                         if isScreenshotOnly {
-                            await alertPresenter.showError("Failed to capture screenshot. Please ensure the app has screen recording permissions.")
+                            await alertPresenter.showError(
+                                title: "📹 Screenshot Capture Failed",
+                                message: """
+                                Unable to capture screenshot for analysis.
+                                
+                                Fix: System Settings → Privacy & Security → Screen Recording
+                                → Enable TextEnhancer
+                                """,
+                                actions: [
+                                    .openSystemSettings(panel: "com.apple.preference.security"),
+                                    .ok()
+                                ]
+                            )
                             return
                         }
                     }
@@ -371,7 +504,11 @@ class TextProcessor: ObservableObject {
                 
             } catch {
                 print("❌ TextProcessor: Error during processing: \(error)")
-                await alertPresenter.showError("Failed to enhance text: \(error.localizedDescription)")
+                await alertPresenter.showError(
+                    title: "❌ Enhancement Failed",
+                    message: error.localizedDescription,
+                    actions: alertActions(for: error)
+                )
             }
         }
         

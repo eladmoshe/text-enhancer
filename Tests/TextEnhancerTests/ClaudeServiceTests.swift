@@ -236,13 +236,18 @@ final class ClaudeServiceTests: XCTestCase {
     }
     
     func test_errorDescriptions() {
-        XCTAssertEqual(ClaudeError.missingApiKey.errorDescription, "Claude API key is missing. Please set it in Settings.")
-        XCTAssertEqual(ClaudeError.invalidURL.errorDescription, "Invalid API URL")
-        XCTAssertEqual(ClaudeError.invalidResponse.errorDescription, "Invalid response from Claude API")
-        XCTAssertEqual(ClaudeError.noContent.errorDescription, "No content received from Claude API")
+        XCTAssertEqual(ClaudeError.missingApiKey.errorDescription, """
+            🔑 Claude API key missing or invalid
+            
+            Fix: Open Settings → Enter your Claude API key
+            Get a key at: console.anthropic.com
+            """)
+        XCTAssertEqual(ClaudeError.invalidURL.errorDescription, "⚠️ Invalid API URL configuration")
+        XCTAssertEqual(ClaudeError.invalidResponse.errorDescription, "⚠️ Invalid response from Claude API")
+        XCTAssertEqual(ClaudeError.noContent.errorDescription, "⚠️ No response content received from Claude API")
         
         let errorData = "Error message".data(using: .utf8)!
         let apiError = ClaudeError.apiError(400, errorData)
-        XCTAssertEqual(apiError.errorDescription, "Claude API error (400): Error message")
+        XCTAssertEqual(apiError.errorDescription, "⚠️ Claude API error (400): Error message")
     }
 } 
