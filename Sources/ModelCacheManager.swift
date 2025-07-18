@@ -76,6 +76,9 @@ class ModelCacheManager {
     // MARK: - Generic Cache Operations
     
     private func loadCachedModels<T: Codable>(from file: URL) -> CachedModels<T>? {
+        // Ensure cache directory exists
+        try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        
         guard FileManager.default.fileExists(atPath: file.path) else {
             return nil
         }
@@ -92,6 +95,9 @@ class ModelCacheManager {
     
     private func saveCachedModels<T: Codable>(_ cachedModels: CachedModels<T>, to file: URL) {
         do {
+            // Ensure cache directory exists
+            try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+            
             let encoder = JSONEncoder()
             encoder.outputFormatting = .prettyPrinted
             let data = try encoder.encode(cachedModels)

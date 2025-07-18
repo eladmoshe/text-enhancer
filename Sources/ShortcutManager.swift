@@ -6,6 +6,12 @@ class ShortcutManager: ObservableObject {
     private let configManager: ConfigurationManager
     private var registeredShortcuts: [RegisteredShortcut] = []
     private var eventHandler: EventHandlerRef?
+    private var masterShortcutRef: EventHotKeyRef?
+    
+    // Master shortcut menu controller
+    private lazy var menuController: ShortcutMenuController = {
+        ShortcutMenuController(configManager: configManager, textProcessor: textProcessor)
+    }()
     
     init(textProcessor: TextProcessor, configManager: ConfigurationManager) {
         self.textProcessor = textProcessor
@@ -24,9 +30,38 @@ class ShortcutManager: ObservableObject {
         // Unregister existing shortcuts first
         unregisterAllShortcuts()
         
+        // Register master shortcut (Ctrl+Option+Tab)
+        registerMasterShortcut()
+        
         // Register shortcuts from configuration
         for shortcut in configManager.configuration.shortcuts {
             registerShortcut(from: shortcut)
+        }
+    }
+    
+    private func registerMasterShortcut() {
+        // Tab key is keyCode 48, Ctrl+Option modifiers
+        let keyCode: UInt32 = 48 // Tab key
+        let modifiers: UInt32 = UInt32(controlKey) | UInt32(optionKey)
+        
+        print("🔧 ShortcutManager: Registering master shortcut (Ctrl+Option+Tab)")
+        
+        // Register the master shortcut with ID 0 (reserved for master)
+        let masterHotKeyID = EventHotKeyID(signature: OSType(fourCharCode(from: "TEnh")), id: 0)
+        
+        let status = RegisterEventHotKey(
+            keyCode,
+            modifiers,
+            masterHotKeyID,
+            GetEventDispatcherTarget(),
+            0,
+            &masterShortcutRef
+        )
+        
+        if status == noErr {
+            print("✅ Registered master shortcut: Ctrl+Option+Tab")
+        } else {
+            print("❌ Failed to register master shortcut: \(status)")
         }
     }
     
@@ -117,15 +152,26 @@ class ShortcutManager: ObservableObject {
     }
     
     private func handleShortcut(with hotKeyID: EventHotKeyID) {
-        // Find the shortcut by index (ID-1 since we start IDs at 1)
-        let index = Int(hotKeyID.id) - 1
-        
-        if index >= 0 && index < registeredShortcuts.count {
-            print("🔧 ShortcutManager: Triggered shortcut: \(registeredShortcuts[index].name)")
-            handleShortcut(registeredShortcuts[index])
+        if hotKeyID.id == 0 {
+            // Master shortcut triggered
+            print("🔧 ShortcutManager: Master shortcut triggered")
+            handleMasterShortcut()
         } else {
-            print("⚠️  ShortcutManager: Invalid shortcut index: \(index)")
+            // Find the shortcut by index (ID-1 since we start IDs at 1)
+            let index = Int(hotKeyID.id) - 1
+            
+            if index >= 0 && index < registeredShortcuts.count {
+                print("🔧 ShortcutManager: Triggered shortcut: \(registeredShortcuts[index].name)")
+                handleShortcut(registeredShortcuts[index])
+            } else {
+                print("⚠️  ShortcutManager: Invalid shortcut index: \(index)")
+            }
         }
+    }
+    
+    private func handleMasterShortcut() {
+        print("🔧 ShortcutManager: Showing master shortcut menu")
+        menuController.showMenu()
     }
     
     private func handleShortcut(_ shortcut: RegisteredShortcut) {
@@ -141,6 +187,13 @@ class ShortcutManager: ObservableObject {
     }
     
     private func unregisterAllShortcuts() {
+        // Unregister master shortcut
+        if let masterShortcutRef = masterShortcutRef {
+            UnregisterEventHotKey(masterShortcutRef)
+            self.masterShortcutRef = nil
+        }
+        
+        // Unregister all other shortcuts
         for shortcut in registeredShortcuts {
             if let hotKeyRef = shortcut.hotKeyRef {
                 UnregisterEventHotKey(hotKeyRef)

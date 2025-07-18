@@ -212,6 +212,11 @@ class TextProcessor: ObservableObject {
         await processSelectedText(with: prompt, using: provider, model: model)
     }
     
+    func processSelectedText(with prompt: String, shortcut: ShortcutConfiguration) async {
+        print("🔧 TextProcessor: Starting text processing with shortcut: \(shortcut.name)")
+        await processSelectedText(with: prompt, using: shortcut.provider, model: shortcut.model)
+    }
+    
     func processSelectedText(with prompt: String, using provider: APIProvider, model: String) async {
         print("🔧 TextProcessor: Starting text processing with provider: \(provider) and model: \(model)")
         
