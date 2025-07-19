@@ -11,4 +11,4 @@
 [x] Add unit tests for default config loading
 [x] Update documentation
 [x] Run tests and verify functionality
-[] Commit and create PR 
+[x] Commit and create PR 
