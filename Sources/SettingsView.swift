@@ -1,5 +1,48 @@
 import SwiftUI
 
+struct CollapsibleSection<Content: View>: View {
+    let title: String
+    @Binding var isExpanded: Bool
+    @ViewBuilder let content: Content
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack {
+                    Text(title)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 14, weight: .medium))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color(.controlBackgroundColor))
+                .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 0) {
+                    content
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color(.controlBackgroundColor).opacity(0.3))
+                .cornerRadius(8)
+                .padding(.top, 2)
+            }
+        }
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var configManager: ConfigurationManager
     @State private var shortcuts: [ShortcutConfiguration]
@@ -13,12 +56,12 @@ struct SettingsView: View {
     @State private var openaiApiKey: String
     @State private var claudeEnabled: Bool
     @State private var openaiEnabled: Bool
-    @State private var testText: String = ""
-    @State private var selectedShortcutId: String? = nil
-    @State private var testResult: String = ""
     @State private var isTestingInProgress: Bool = false
     @State private var isClaudeKeyLocked: Bool = false
     @State private var isOpenaiKeyLocked: Bool = false
+    @State private var shortcutsExpanded: Bool = true
+    @State private var apiProvidersExpanded: Bool = false
+    @State private var generalSettingsExpanded: Bool = false
     
     // Shared cache manager instance
     private let cacheManager = ModelCacheManager()
@@ -52,9 +95,12 @@ struct SettingsView: View {
             .background(Color(.controlBackgroundColor))
             
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 16) {
                     // Shortcuts Section
-                    GroupBox("Shortcuts") {
+                    CollapsibleSection(
+                        title: "Shortcuts",
+                        isExpanded: $shortcutsExpanded
+                    ) {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("Configure keyboard shortcuts and their prompts")
@@ -73,7 +119,7 @@ struct SettingsView: View {
                                     .foregroundColor(.secondary)
                                     .padding(.vertical, 8)
                             } else {
-                                List {
+                                LazyVStack(spacing: 8) {
                                     ForEach(shortcuts, id: \.id) { shortcut in
                                         ShortcutRowView(
                                             shortcut: shortcut,
@@ -81,22 +127,21 @@ struct SettingsView: View {
                                             onDelete: {
                                                 deleteShortcut(shortcut)
                                                 saveConfiguration()
-                                            }
+                                            },
+                                            configManager: configManager
                                         )
-                                        .listRowBackground(Color.clear)
-                                        .listRowSeparator(.hidden)
                                     }
-                                    .onMove(perform: moveShortcut)
                                 }
-                                .listStyle(.plain)
-                                .frame(minHeight: CGFloat(shortcuts.count * 80))
                             }
                         }
                         .padding(.vertical, 4)
                     }
                     
                     // API Providers Section
-                    GroupBox("API Providers") {
+                    CollapsibleSection(
+                        title: "API Providers",
+                        isExpanded: $apiProvidersExpanded
+                    ) {
                         VStack(alignment: .leading, spacing: 16) {
                             // Claude Configuration
                             VStack(alignment: .leading, spacing: 8) {
@@ -217,102 +262,11 @@ struct SettingsView: View {
                         .padding(.vertical, 4)
                     }
                     
-                    // Test Prompt Section
-                    GroupBox("Test Prompt") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Test your configured shortcuts without switching to external applications")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Test Text:")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                TextEditor(text: $testText)
-                                    .frame(minHeight: 60)
-                                    .font(.system(.body, design: .monospaced))
-                                    .border(Color(.separatorColor), width: 1)
-                                    .cornerRadius(4)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Select Shortcut to Test:")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                
-                                if shortcuts.isEmpty {
-                                    Text("No shortcuts configured")
-                                        .foregroundColor(.secondary)
-                                        .italic()
-                                } else {
-                                    Picker("Shortcut", selection: $selectedShortcutId) {
-                                        Text("Select a shortcut...").tag(nil as String?)
-                                        ForEach(shortcuts, id: \.id) { shortcut in
-                                            Text("\(shortcut.name) (\(shortcut.provider.displayName))")
-                                                .tag(shortcut.id as String?)
-                                        }
-                                    }
-                                    .pickerStyle(.menu)
-                                }
-                            }
-                            
-                            if let selectedShortcutId = selectedShortcutId,
-                               let selectedShortcut = shortcuts.first(where: { $0.id == selectedShortcutId }) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Prompt Preview:")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                    Text(selectedShortcut.prompt)
-                                        .font(.system(.caption, design: .monospaced))
-                                        .foregroundColor(.secondary)
-                                        .padding(8)
-                                        .background(Color(.controlBackgroundColor))
-                                        .cornerRadius(4)
-                                        .lineLimit(3)
-                                }
-                            }
-                            
-                            HStack {
-                                Button("Test") {
-                                    Task {
-                                        await testPrompt()
-                                    }
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .disabled(testText.isEmpty || selectedShortcutId == nil || isTestingInProgress)
-                                
-                                if isTestingInProgress {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                        .padding(.leading, 8)
-                                }
-                                
-                                Spacer()
-                            }
-                            
-                            if !testResult.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Result:")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                    ScrollView {
-                                        Text(testResult)
-                                            .font(.system(.body, design: .monospaced))
-                                            .textSelection(.enabled)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                    }
-                                    .frame(maxHeight: 150)
-                                    .border(Color(.separatorColor), width: 1)
-                                    .cornerRadius(4)
-                                    .background(Color(.controlBackgroundColor))
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    
                     // General Settings Section
-                    GroupBox("General Settings") {
+                    CollapsibleSection(
+                        title: "General Settings",
+                        isExpanded: $generalSettingsExpanded
+                    ) {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("Max Tokens:")
@@ -381,46 +335,11 @@ struct SettingsView: View {
         }
     }
     
-    private func testPrompt() async {
-        guard !testText.isEmpty, 
-              let selectedShortcutId = selectedShortcutId,
-              let selectedShortcut = shortcuts.first(where: { $0.id == selectedShortcutId }) else { return }
-        
-        isTestingInProgress = true
-        testResult = ""
-        
-        defer {
-            isTestingInProgress = false
-        }
-        
-        do {
-            guard let apiService = APIProviderFactory.createService(for: selectedShortcut.provider, configManager: configManager) else {
-                await MainActor.run {
-                    testResult = "Error: API provider \(selectedShortcut.provider.displayName) is not configured or enabled."
-                }
-                return
-            }
-            
-            let enhancedText = try await apiService.enhanceText(testText, with: selectedShortcut.prompt, using: selectedShortcut.model)
-            
-            await MainActor.run {
-                testResult = enhancedText
-            }
-        } catch {
-            await MainActor.run {
-                testResult = "Error: \(error.localizedDescription)"
-            }
-        }
-    }
     
     private func deleteShortcut(_ shortcut: ShortcutConfiguration) {
         shortcuts.removeAll { $0.id == shortcut.id }
     }
     
-    private func moveShortcut(from source: IndexSet, to destination: Int) {
-        shortcuts.move(fromOffsets: source, toOffset: destination)
-        saveConfiguration()
-    }
     
     private func saveConfiguration() {
         let newConfig = AppConfiguration(
@@ -454,128 +373,236 @@ struct ShortcutRowView: View {
     let shortcut: ShortcutConfiguration
     let onEdit: () -> Void
     let onDelete: () -> Void
+    let configManager: ConfigurationManager
+    
+    @State private var testText: String = ""
+    @State private var testResult: String = ""
+    @State private var isTestingInProgress: Bool = false
+    @State private var showTestSection: Bool = false
     
     var body: some View {
-        HStack {
-            // Drag handle
-            Image(systemName: "line.3.horizontal")
-                .foregroundColor(.secondary)
-                .font(.caption)
-                .frame(width: 20)
-                .padding(.trailing, 8)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(shortcut.name)
-                        .font(.title3)
-                        .fontWeight(.medium)
-                    Spacer()
-                    Text(formatShortcutDisplay(shortcut.modifiers, shortcut.keyCode))
-                        .font(.system(.callout, design: .monospaced))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color(.controlBackgroundColor))
-                        .cornerRadius(6)
-                }
-                
-                HStack(spacing: 8) {
-                    // Provider and model tag
-                    let providerTextColor: Color = {
-                        switch shortcut.provider {
-                        case .claude:
-                            return .orange
-                        case .openai:
-                            return .black
-                        }
-                    }()
-                    let providerBackground: Color = {
-                        switch shortcut.provider {
-                        case .claude:
-                            return .orange.opacity(0.1)
-                        case .openai:
-                            return .clear // Use clear to avoid unwanted background color
-                        }
-                    }()
-
-                    let tagContent = HStack(spacing: 4) {
-                        Circle()
-                            .fill(providerTextColor)
-                            .frame(width: 6, height: 6)
-                        Text(shortcut.provider.displayName)
-                            .font(.caption)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(shortcut.name)
+                            .font(.title3)
                             .fontWeight(.medium)
-                        Text("•")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text(formatModelName(shortcut.model))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-
-                    if shortcut.provider == .openai {
-                        tagContent
-                            .background(Color.white)
-                            .foregroundColor(.black)
-                            .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.gray.opacity(0.5), lineWidth: 0.5)
-                            )
-                    } else {
-                        tagContent
-                            .background(providerBackground)
-                            .foregroundColor(providerTextColor)
-                            .cornerRadius(10)
+                        Spacer()
+                        Text(formatShortcutDisplay(shortcut.modifiers, shortcut.keyCode))
+                            .font(.system(.callout, design: .monospaced))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color(.controlBackgroundColor))
+                            .cornerRadius(6)
                     }
                     
-                    if shortcut.effectiveIncludeScreenshot {
-                        HStack(spacing: 4) {
-                            Image(systemName: "camera")
+                    HStack(spacing: 8) {
+                        // Provider and model tag
+                        let providerTextColor: Color = {
+                            switch shortcut.provider {
+                            case .claude:
+                                return .orange
+                            case .openai:
+                                return .black
+                            }
+                        }()
+                        let providerBackground: Color = {
+                            switch shortcut.provider {
+                            case .claude:
+                                return .orange.opacity(0.1)
+                            case .openai:
+                                return .clear
+                            }
+                        }()
+
+                        let tagContent = HStack(spacing: 4) {
+                            Circle()
+                                .fill(providerTextColor)
+                                .frame(width: 6, height: 6)
+                            Text(shortcut.provider.displayName)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                            Text("•")
                                 .font(.caption2)
-                            Text("Screenshot")
+                                .foregroundColor(.secondary)
+                            Text(formatModelName(shortcut.model))
                                 .font(.caption)
                                 .fontWeight(.medium)
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Color.blue.opacity(0.1))
-                        .foregroundColor(.blue)
-                        .cornerRadius(10)
+
+                        if shortcut.provider == .openai {
+                            tagContent
+                                .background(Color.white)
+                                .foregroundColor(.black)
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.gray.opacity(0.5), lineWidth: 0.5)
+                                )
+                        } else {
+                            tagContent
+                                .background(providerBackground)
+                                .foregroundColor(providerTextColor)
+                                .cornerRadius(10)
+                        }
+                        
+                        if shortcut.effectiveIncludeScreenshot {
+                            HStack(spacing: 4) {
+                                Image(systemName: "camera")
+                                    .font(.caption2)
+                                Text("Screenshot")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
+                            .cornerRadius(10)
+                        }
+                        
+                        Spacer()
                     }
                     
-                    Spacer()
+                    Text(shortcut.prompt)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(showTestSection ? nil : 2)
+                        .truncationMode(.tail)
                 }
                 
-                Text(shortcut.prompt)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
-                    .truncationMode(.tail)
+                VStack(spacing: 6) {
+                    Button("Edit") {
+                        onEdit()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .font(.caption)
+                    
+                    Button("Test") {
+                        showTestSection.toggle()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .font(.caption)
+                    .foregroundColor(showTestSection ? .blue : .primary)
+                    
+                    Button("Delete") {
+                        onDelete()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                }
             }
             
-            VStack(spacing: 6) {
-                Button("Edit") {
-                    onEdit()
+            if showTestSection {
+                VStack(alignment: .leading, spacing: 8) {
+                    Divider()
+                    
+                    HStack {
+                        Text("Test this shortcut:")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                    }
+                    
+                    TextEditor(text: $testText)
+                        .frame(height: 60)
+                        .font(.system(.body, design: .monospaced))
+                        .border(Color(.separatorColor), width: 1)
+                        .cornerRadius(4)
+                    
+                    HStack {
+                        Button("Run Test") {
+                            Task {
+                                await runTest()
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(testText.isEmpty || isTestingInProgress)
+                        .font(.subheadline)
+                        
+                        if isTestingInProgress {
+                            ProgressView()
+                                .controlSize(.small)
+                                .padding(.leading, 8)
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Clear") {
+                            testText = ""
+                            testResult = ""
+                        }
+                        .buttonStyle(.bordered)
+                        .font(.subheadline)
+                    }
+                    
+                    if !testResult.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Result:")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            ScrollView {
+                                Text(testResult)
+                                    .font(.system(.body, design: .monospaced))
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(8)
+                            }
+                            .frame(maxHeight: 120)
+                            .border(Color(.separatorColor), width: 1)
+                            .cornerRadius(4)
+                            .background(Color(.controlBackgroundColor).opacity(0.5))
+                        }
+                    }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
-                .font(.subheadline)
-                
-                Button("Delete") {
-                    onDelete()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
-                .font(.subheadline)
-                .foregroundColor(.red)
+                .padding(.top, 4)
             }
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
         .background(Color(.controlBackgroundColor).opacity(0.3))
-        .cornerRadius(6)
+        .cornerRadius(8)
+    }
+    
+    private func runTest() async {
+        guard !testText.isEmpty else { return }
+        
+        await MainActor.run {
+            isTestingInProgress = true
+            testResult = ""
+        }
+        
+        defer {
+            Task { @MainActor in
+                isTestingInProgress = false
+            }
+        }
+        
+        do {
+            guard let apiService = APIProviderFactory.createService(for: shortcut.provider, configManager: configManager) else {
+                await MainActor.run {
+                    testResult = "Error: API provider \(shortcut.provider.displayName) is not configured or enabled."
+                }
+                return
+            }
+            
+            let enhancedText = try await apiService.enhanceText(testText, with: shortcut.prompt, using: shortcut.model)
+            
+            await MainActor.run {
+                testResult = enhancedText
+            }
+        } catch {
+            await MainActor.run {
+                testResult = "Error: \(error.localizedDescription)"
+            }
+        }
     }
     
     private func formatModelName(_ model: String) -> String {
