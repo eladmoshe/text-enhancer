@@ -1,0 +1,35 @@
+{
+  "shortcuts": [
+    {
+      "id": "improve-text",
+      "name": "Improve Text",
+      "keyCode": 18,
+      "modifiers": [
+        "ctrl",
+        "opt"
+      ],
+      "prompt": "Improve the writing quality and clarity of this text while maintaining its original meaning and tone.",
+      "provider": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "includeScreenshot": null
+    }
+  ],
+  "maxTokens": 1000,
+  "timeout": 30,
+  "showStatusIcon": true,
+  "enableNotifications": true,
+  "autoSave": true,
+  "logLevel": "info",
+  "apiProviders": {
+    "claude": {
+      "apiKey": "",
+      "model": "claude-4-sonnet",
+      "enabled": true
+    },
+    "openai": {
+      "apiKey": "",
+      "model": "gpt-4o",
+      "enabled": false
+    }
+  }
+} 

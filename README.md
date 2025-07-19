@@ -177,6 +177,29 @@ make clean
 make bundle
 ```
 
+### Developer Tools
+
+#### Extract Default Configuration
+
+Use the `extract-shortcuts.sh` script to capture your current shortcuts and set them as defaults for clean installations:
+
+```bash
+# Extract current shortcuts and create default configuration
+./extract-shortcuts.sh
+
+# Preview what would be extracted without saving
+./extract-shortcuts.sh --preview
+
+# Show help
+./extract-shortcuts.sh --help
+```
+
+This script:
+- Reads your current configuration from `~/Library/Application Support/TextEnhancer/config.json`
+- Scrubs sensitive data (API keys)
+- Creates `config.default.json` in the project root
+- The default configuration is automatically bundled with the app for clean installations
+
 ### Dependencies
 
 - **No external dependencies** - Phase 1 uses only native macOS frameworks

@@ -19,6 +19,9 @@ let package = Package(
             name: "TextEnhancer",
             dependencies: [],
             path: "Sources",
+            resources: [
+                .copy("../config.default.json")
+            ],
             swiftSettings: [
                 .unsafeFlags(["-parse-as-library"])
             ]

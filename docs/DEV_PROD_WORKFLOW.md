@@ -101,6 +101,45 @@ The previous approach used separate bundle identifiers (`com.textenhancer.app` v
 ./build.sh --help
 ```
 
+## Updating Bundled Default Configuration
+
+When you have a well-configured setup with shortcuts that should be included in clean installations, use the configuration extraction script:
+
+### Process
+1. **Configure your shortcuts**: Set up TextEnhancer with your desired shortcuts and settings
+2. **Extract configuration**: 
+   ```bash
+   ./extract-shortcuts.sh
+   ```
+3. **Review the generated file**: Check `config.default.json` for accuracy
+4. **Commit the changes**: 
+   ```bash
+   git add config.default.json
+   git commit -m "Update bundled default configuration"
+   ```
+5. **Test clean installation**: Delete user config and test that defaults load correctly
+
+### What gets extracted
+- ✅ **Shortcuts**: All configured keyboard shortcuts and prompts
+- ✅ **App settings**: Timeout, max tokens, UI preferences
+- ✅ **Provider settings**: Model choices and enabled providers
+- ❌ **API keys**: Automatically scrubbed for security
+
+### Testing the defaults
+```bash
+# Backup current config
+cp "$HOME/Library/Application Support/TextEnhancer/config.json" ~/config-backup.json
+
+# Remove current config to test defaults
+rm "$HOME/Library/Application Support/TextEnhancer/config.json"
+
+# Run app - should load from bundled defaults
+./build.sh --bundle-signed
+
+# Restore your config
+mv ~/config-backup.json "$HOME/Library/Application Support/TextEnhancer/config.json"
+```
+
 ## 🔍 Build Script Reference (Cheat-Sheet)
 
 | Scenario | Command | Builds | Output Location | Auto-Installs To | Permissions Persistence |

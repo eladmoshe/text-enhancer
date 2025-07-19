@@ -90,6 +90,10 @@ class ConfigurationManager: ObservableObject {
         }
     }
     
+    private func bundledDefaultConfigURL() -> URL? {
+        Bundle.main.url(forResource: "config.default", withExtension: "json")
+    }
+    
     func loadConfiguration() {
         print("🔧 ConfigurationManager: Loading configuration...")
         print("🔧 ConfigurationManager: Looking for config at: \(configFile.path)")
@@ -106,12 +110,27 @@ class ConfigurationManager: ObservableObject {
                 print("❌ Failed to load configuration: \(error)")
             }
         } else {
-            print("🔧 ConfigurationManager: Config file does not exist, using defaults")
+            print("🔧 ConfigurationManager: Config file does not exist, checking for bundled defaults")
         }
         
-        // Use default configuration and save it
+        // Try to load bundled default configuration
+        if let bundledConfigURL = bundledDefaultConfigURL() {
+            do {
+                let data = try Data(contentsOf: bundledConfigURL)
+                self.configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
+                print("✅ Configuration loaded from bundled defaults: \(bundledConfigURL.path)")
+                print("🔧 ConfigurationManager: Loaded \(configuration.shortcuts.count) shortcuts from bundle")
+                return
+            } catch {
+                print("❌ Failed to load bundled configuration: \(error)")
+            }
+        } else {
+            print("🔧 ConfigurationManager: No bundled default config found")
+        }
+        
+        // Fall back to hardcoded default configuration and save it
         configuration = AppConfiguration.default
-        print("ℹ️  Using default configuration with \(configuration.shortcuts.count) shortcuts")
+        print("ℹ️  Using hardcoded default configuration with \(configuration.shortcuts.count) shortcuts")
         saveConfiguration(configuration)
     }
 }
