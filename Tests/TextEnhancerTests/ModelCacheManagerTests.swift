@@ -77,6 +77,10 @@ final class ModelCacheManagerTests: XCTestCase {
         ]
         cacheManager.cacheClaudeModels(claudeModels)
         cacheManager.cacheOpenAIModels(openaiModels)
+        
+        // Add a small delay to ensure file system operations complete in CI environment
+        Thread.sleep(forTimeInterval: 0.1)
+        
         // Ensure caches exist
         XCTAssertNotNil(cacheManager.getCachedClaudeModels())
         XCTAssertNotNil(cacheManager.getCachedOpenAIModels())
