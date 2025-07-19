@@ -266,7 +266,7 @@ final class OpenAIServiceTests: XCTestCase {
             logLevel: currentConfig.logLevel,
             apiProviders: modifiedApiProviders
         )
-        try? configManager.saveConfiguration(emptyKeyConfig)
+        configManager.configuration = emptyKeyConfig
         
         let mockSession = MockURLSession()
         let service = OpenAIService(configManager: configManager, urlSession: mockSession)

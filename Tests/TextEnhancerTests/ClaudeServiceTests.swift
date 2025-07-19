@@ -292,7 +292,7 @@ final class ClaudeServiceTests: XCTestCase {
             logLevel: currentConfig.logLevel,
             apiProviders: modifiedApiProviders
         )
-        try? configManager.saveConfiguration(emptyKeyConfig)
+        configManager.configuration = emptyKeyConfig
         
         let mockSession = MockURLSession()
         let service = ClaudeService(configManager: configManager, urlSession: mockSession)
