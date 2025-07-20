@@ -1,0 +1,560 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		99C025C12E2D7DF600318551 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 99C025AA2E2D7DF400318551 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 99C025B12E2D7DF400318551;
+			remoteInfo = TextEnhancer;
+		};
+		99C025CB2E2D7DF600318551 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 99C025AA2E2D7DF400318551 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 99C025B12E2D7DF400318551;
+			remoteInfo = TextEnhancer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		99C025B22E2D7DF400318551 /* TextEnhancer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TextEnhancer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		99C025C02E2D7DF600318551 /* TextEnhancerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TextEnhancerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		99C025CA2E2D7DF600318551 /* TextEnhancerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TextEnhancerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		99C025B42E2D7DF400318551 /* TextEnhancer */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TextEnhancer;
+			sourceTree = "<group>";
+		};
+		99C025C32E2D7DF600318551 /* TextEnhancerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TextEnhancerTests;
+			sourceTree = "<group>";
+		};
+		99C025CD2E2D7DF600318551 /* TextEnhancerUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TextEnhancerUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		99C025AF2E2D7DF400318551 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		99C025BD2E2D7DF600318551 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		99C025C72E2D7DF600318551 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		99C025A92E2D7DF400318551 = {
+			isa = PBXGroup;
+			children = (
+				99C025B42E2D7DF400318551 /* TextEnhancer */,
+				99C025C32E2D7DF600318551 /* TextEnhancerTests */,
+				99C025CD2E2D7DF600318551 /* TextEnhancerUITests */,
+				99C025B32E2D7DF400318551 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		99C025B32E2D7DF400318551 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				99C025B22E2D7DF400318551 /* TextEnhancer.app */,
+				99C025C02E2D7DF600318551 /* TextEnhancerTests.xctest */,
+				99C025CA2E2D7DF600318551 /* TextEnhancerUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		99C025B12E2D7DF400318551 /* TextEnhancer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 99C025D42E2D7DF600318551 /* Build configuration list for PBXNativeTarget "TextEnhancer" */;
+			buildPhases = (
+				99C025AE2E2D7DF400318551 /* Sources */,
+				99C025AF2E2D7DF400318551 /* Frameworks */,
+				99C025B02E2D7DF400318551 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				99C025B42E2D7DF400318551 /* TextEnhancer */,
+			);
+			name = TextEnhancer;
+			packageProductDependencies = (
+			);
+			productName = TextEnhancer;
+			productReference = 99C025B22E2D7DF400318551 /* TextEnhancer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		99C025BF2E2D7DF600318551 /* TextEnhancerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 99C025D72E2D7DF600318551 /* Build configuration list for PBXNativeTarget "TextEnhancerTests" */;
+			buildPhases = (
+				99C025BC2E2D7DF600318551 /* Sources */,
+				99C025BD2E2D7DF600318551 /* Frameworks */,
+				99C025BE2E2D7DF600318551 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				99C025C22E2D7DF600318551 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				99C025C32E2D7DF600318551 /* TextEnhancerTests */,
+			);
+			name = TextEnhancerTests;
+			packageProductDependencies = (
+			);
+			productName = TextEnhancerTests;
+			productReference = 99C025C02E2D7DF600318551 /* TextEnhancerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		99C025C92E2D7DF600318551 /* TextEnhancerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 99C025DA2E2D7DF600318551 /* Build configuration list for PBXNativeTarget "TextEnhancerUITests" */;
+			buildPhases = (
+				99C025C62E2D7DF600318551 /* Sources */,
+				99C025C72E2D7DF600318551 /* Frameworks */,
+				99C025C82E2D7DF600318551 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				99C025CC2E2D7DF600318551 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				99C025CD2E2D7DF600318551 /* TextEnhancerUITests */,
+			);
+			name = TextEnhancerUITests;
+			packageProductDependencies = (
+			);
+			productName = TextEnhancerUITests;
+			productReference = 99C025CA2E2D7DF600318551 /* TextEnhancerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		99C025AA2E2D7DF400318551 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					99C025B12E2D7DF400318551 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					99C025BF2E2D7DF600318551 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 99C025B12E2D7DF400318551;
+					};
+					99C025C92E2D7DF600318551 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 99C025B12E2D7DF400318551;
+					};
+				};
+			};
+			buildConfigurationList = 99C025AD2E2D7DF400318551 /* Build configuration list for PBXProject "TextEnhancer" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 99C025A92E2D7DF400318551;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 99C025B32E2D7DF400318551 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				99C025B12E2D7DF400318551 /* TextEnhancer */,
+				99C025BF2E2D7DF600318551 /* TextEnhancerTests */,
+				99C025C92E2D7DF600318551 /* TextEnhancerUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		99C025B02E2D7DF400318551 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		99C025BE2E2D7DF600318551 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		99C025C82E2D7DF600318551 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		99C025AE2E2D7DF400318551 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		99C025BC2E2D7DF600318551 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		99C025C62E2D7DF600318551 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		99C025C22E2D7DF600318551 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 99C025B12E2D7DF400318551 /* TextEnhancer */;
+			targetProxy = 99C025C12E2D7DF600318551 /* PBXContainerItemProxy */;
+		};
+		99C025CC2E2D7DF600318551 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 99C025B12E2D7DF400318551 /* TextEnhancer */;
+			targetProxy = 99C025CB2E2D7DF600318551 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		99C025D22E2D7DF600318551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = T225FP4EY4;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		99C025D32E2D7DF600318551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = T225FP4EY4;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+			};
+			name = Release;
+		};
+		99C025D52E2D7DF600318551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TextEnhancer/TextEnhancer.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T225FP4EY4;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lemonadeinc.TextEnhancer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+			};
+			name = Debug;
+		};
+		99C025D62E2D7DF600318551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TextEnhancer/TextEnhancer.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T225FP4EY4;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lemonadeinc.TextEnhancer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+			};
+			name = Release;
+		};
+		99C025D82E2D7DF600318551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T225FP4EY4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lemonadeinc.TextEnhancerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TextEnhancer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TextEnhancer";
+			};
+			name = Debug;
+		};
+		99C025D92E2D7DF600318551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T225FP4EY4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lemonadeinc.TextEnhancerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TextEnhancer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TextEnhancer";
+			};
+			name = Release;
+		};
+		99C025DB2E2D7DF600318551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T225FP4EY4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lemonadeinc.TextEnhancerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = TextEnhancer;
+			};
+			name = Debug;
+		};
+		99C025DC2E2D7DF600318551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T225FP4EY4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lemonadeinc.TextEnhancerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = TextEnhancer;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		99C025AD2E2D7DF400318551 /* Build configuration list for PBXProject "TextEnhancer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				99C025D22E2D7DF600318551 /* Debug */,
+				99C025D32E2D7DF600318551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		99C025D42E2D7DF600318551 /* Build configuration list for PBXNativeTarget "TextEnhancer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				99C025D52E2D7DF600318551 /* Debug */,
+				99C025D62E2D7DF600318551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		99C025D72E2D7DF600318551 /* Build configuration list for PBXNativeTarget "TextEnhancerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				99C025D82E2D7DF600318551 /* Debug */,
+				99C025D92E2D7DF600318551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		99C025DA2E2D7DF600318551 /* Build configuration list for PBXNativeTarget "TextEnhancerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				99C025DB2E2D7DF600318551 /* Debug */,
+				99C025DC2E2D7DF600318551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 99C025AA2E2D7DF400318551 /* Project object */;
+}
