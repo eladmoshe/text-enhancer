@@ -95,6 +95,10 @@ class OpenAIService: ObservableObject {
         }
         
         guard httpResponse.statusCode == 200 else {
+            print("❌ OpenAIService: API error (status: \(httpResponse.statusCode))")
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("❌ OpenAIService: Error details: \(errorString)")
+            }
             throw OpenAIError.apiError(httpResponse.statusCode, data)
         }
         
@@ -103,20 +107,36 @@ class OpenAIService: ObservableObject {
         guard let content = responseData.choices.first?.message.content else {
             throw OpenAIError.noContent
         }
+
+        // Debug: log first part of content for inspection
+        print("🔧 OpenAIService: Raw response content (first 500 chars): \(String(content.prefix(500)))")
         
         // Check if this is a screenshot-only request
         let isScreenshotOnly = text == "[Screenshot analysis requested]"
         
         if isScreenshotOnly {
             // For screenshot analysis, return the content directly
+            print("✅ OpenAIService: Screenshot-only analysis completed")
             return content
         } else {
             // For text enhancement, extract JSON from the response content
             do {
                 let enhancementResponse = try JSONExtractor.extractJSONPayload(from: content)
+                print("✅ OpenAIService: Text enhancement completed successfully")
                 return enhancementResponse.enhancedText
             } catch {
-                throw OpenAIError.invalidJSONResponse(error)
+                print("❌ OpenAIService: JSON extraction failed: \(error)")
+                print("🔧 OpenAIService: Raw response content (first 200 chars): \(String(content.prefix(200)))")
+                
+                // If JSON parsing fails but we have screen context, this might be a vision response
+                // that should be returned directly
+                if screenContext != nil {
+                    print("✅ OpenAIService: Treating as vision response, returning content directly")
+                    return content
+                }
+                
+                print("⚠️ OpenAIService: Returning raw content due to JSON parsing failure")
+                return content
             }
         }
     }
@@ -169,14 +189,18 @@ class OpenAIService: ObservableObject {
         
         if let screenContext = screenContext {
             // Create multimodal message with screen context for vision-capable models
-            let visionModel = model.contains("gpt-4") ? "gpt-4-vision-preview" : "gpt-4-vision-preview" // Use vision model for screenshots
+            print("🔧 OpenAIService: Using vision model: \(model) for screenshot analysis")
+            print("🔧 OpenAIService: Base64 image data length: \(screenContext.count) characters")
+            print("🔧 OpenAIService: Base64 preview: \(String(screenContext.prefix(50)))...")
+            print("🔧 OpenAIService: Creating multimodal request with image and text")
+            
             let messageContent = [
-                OpenAIMessageContent(type: "image_url", image_url: OpenAIImageURL(url: "data:image/jpeg;base64,\(screenContext)")),
+                OpenAIMessageContent(type: "image_url", image_url: OpenAIImageURL(url: "data:image/jpeg;base64,\(screenContext)", detail: "high")),
                 OpenAIMessageContent(type: "text", text: textPrompt)
             ]
             
             let requestBody = OpenAIRequestMultimodal(
-                model: visionModel,
+                model: model, // Use the configured model directly (e.g., gpt-4o)
                 messages: [
                     OpenAIMessageMultimodal(role: "user", content: messageContent)
                 ],
@@ -184,7 +208,14 @@ class OpenAIService: ObservableObject {
                 temperature: 0.7
             )
             
-            request.httpBody = try JSONEncoder().encode(requestBody)
+            let jsonData = try JSONEncoder().encode(requestBody)
+            request.httpBody = jsonData
+            
+            // Debug: Print the JSON request (truncated for readability)
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                let truncatedJson = String(jsonString.prefix(500)) + (jsonString.count > 500 ? "..." : "")
+                print("🔧 OpenAIService: Request JSON (truncated): \(truncatedJson)")
+            }
         } else {
             // Use the simple text-only format for backward compatibility
             let requestBody = OpenAIRequest(
@@ -404,6 +435,12 @@ struct OpenAIMessageContent: Codable {
 
 struct OpenAIImageURL: Codable {
     let url: String
+    let detail: String
+    
+    init(url: String, detail: String = "high") {
+        self.url = url
+        self.detail = detail
+    }
 }
 
 struct OpenAIResponse: Codable {

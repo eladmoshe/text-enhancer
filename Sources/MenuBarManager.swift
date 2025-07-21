@@ -147,6 +147,11 @@ class MenuBarManager: ObservableObject {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
+        // Open Log File
+        let logItem = NSMenuItem(title: "Open Log File", action: #selector(openLogFile), keyEquivalent: "l")
+        logItem.target = self
+        menu.addItem(logItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // Force restart option
@@ -438,6 +443,13 @@ class MenuBarManager: ObservableObject {
     
     @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    // MARK: - Log File
+
+    @objc private func openLogFile() {
+        let url = Logger.shared.logFileURL
+        NSWorkspace.shared.open(url)
     }
     
     @objc private func processingStarted() {

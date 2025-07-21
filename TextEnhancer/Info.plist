@@ -11,7 +11,7 @@
     <key>CFBundleDisplayName</key>
     <string>TextEnhancer</string>
     <key>CFBundleVersion</key>
-    <string>1.0.0</string>
+    <string>1002</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
     <key>CFBundlePackageType</key>
@@ -38,6 +38,14 @@
     <!-- Accessibility usage description -->
     <key>NSAccessibilityUsageDescription</key>
     <string>TextEnhancer needs accessibility permissions to capture and replace selected text across all applications.</string>
+    
+    <!-- Screen capture usage description -->
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>TextEnhancer needs screen recording permissions to capture screenshots for AI analysis and description.</string>
+    
+    <!-- Desktop folder usage description (for screen capture on some macOS versions) -->
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>TextEnhancer may need to access the desktop for screen capture functionality.</string>
     
 </dict>
 </plist> 

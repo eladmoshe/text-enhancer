@@ -1,2 +1,3 @@
 - Markdown docs should go to the docs/ folder
 - After changes, always run the new version of the app so the user can tests it. Validate that the app is running using ps command
+- Change the buildNumber on every build when we need to check something in the logs. When you check logs at /Users/elad.moshe/Library/Logs/TextEnhancer/debug.log verify the version match.

@@ -407,6 +407,7 @@ class TextProcessor: ObservableObject {
     
     func processSelectedText(with prompt: String, using provider: APIProvider, model: String) async {
         print("🔧 TextProcessor: Starting text processing with provider: \(provider) and model: \(model)")
+        print("🚀 TextProcessor: Version: \(AppVersion.fullVersion)")
         
         // Notify that processing has started
         NotificationCenter.default.post(name: .textProcessingStarted, object: nil)
@@ -537,10 +538,17 @@ class TextProcessor: ObservableObject {
                 
                 // Capture screenshot if enabled for this shortcut
                 var screenContext: String? = nil
-                if let shortcut = configManager.configuration.shortcuts.first(where: { $0.prompt == prompt }),
+                let foundShortcut = configManager.configuration.shortcuts.first(where: { $0.prompt == prompt })
+                print("🔧 TextProcessor: DEBUG - Looking for shortcut with prompt: '\(prompt)'")
+                print("🔧 TextProcessor: DEBUG - Found shortcut: \(foundShortcut?.id ?? "nil")")
+                print("🔧 TextProcessor: DEBUG - effectiveIncludeScreenshot: \(foundShortcut?.effectiveIncludeScreenshot ?? false)")
+                
+                if let shortcut = foundShortcut,
                    shortcut.effectiveIncludeScreenshot {
                     
                     print("🔧 TextProcessor: Capturing screenshot for context")
+                    let debugMsg = "About to capture screenshot for shortcut: \(shortcut.id) at \(Date())\n"
+                    try? debugMsg.appendingFormat("").write(to: URL(fileURLWithPath: "/Users/elad.moshe/my-code/text-llm-modify/debug.log"), atomically: false, encoding: .utf8)
                     if let screenshot = screenCaptureService.captureActiveScreen(),
                        let base64Image = screenCaptureService.convertImageToBase64(screenshot) {
                         screenContext = base64Image
@@ -568,10 +576,16 @@ class TextProcessor: ObservableObject {
                 
                 // Process with the appropriate API service
                 let enhancedText: String
-                if let screenContext = screenContext,
-                   let claudeService = apiService as? ClaudeService {
-                    enhancedText = try await claudeService.enhanceText(selectedText, with: prompt, using: model, screenContext: screenContext)
+                print("🔧 TextProcessor: DEBUG - About to call API service")
+                print("🔧 TextProcessor: DEBUG - screenContext is \(screenContext == nil ? "NIL" : "NOT NIL")")
+                if let screenContext = screenContext {
+                    print("🔧 TextProcessor: DEBUG - screenContext length: \(screenContext.count)")
+                    print("🔧 TextProcessor: DEBUG - Calling multimodal API")
+                    // Pass the screen context to the API service for multimodal processing
+                    enhancedText = try await apiService.enhanceText(selectedText, with: prompt, using: model, screenContext: screenContext)
                 } else {
+                    print("🔧 TextProcessor: DEBUG - screenContext is nil, calling text-only API")
+                    // Fallback to text-only enhancement
                     enhancedText = try await apiService.enhanceText(selectedText, with: prompt, using: model)
                 }
                 

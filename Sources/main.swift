@@ -32,6 +32,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var configManager: ConfigurationManager!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Start logging asap
+        _ = Logger.shared
         print("=== TextEnhancer Starting ===")
         
         // Hide from dock and prevent main window

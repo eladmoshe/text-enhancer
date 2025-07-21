@@ -86,9 +86,14 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("TextEnhancer Settings")
-                    .font(.title)
-                    .fontWeight(.semibold)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("TextEnhancer Settings")
+                        .font(.title)
+                        .fontWeight(.semibold)
+                    Text("Version \(AppVersion.fullVersion)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
             }
             .padding()
@@ -865,8 +870,25 @@ struct ShortcutEditView: View {
                 }
                 return
             }
-            
-            let enhancedText = try await apiService.enhanceText(testText, with: prompt, using: model)
+
+            // Handle optional screenshot context if enabled
+            var screenContext: String? = nil
+            if includeScreenshot {
+                let screenCaptureService = ScreenCaptureService()
+                if let screenshot = screenCaptureService.captureActiveScreen(),
+                   let base64Image = screenCaptureService.convertImageToBase64(screenshot) {
+                    screenContext = base64Image
+                } else {
+                    print("⚠️ SettingsView: Failed to capture screenshot for test run – continuing without image context")
+                }
+            }
+
+            let enhancedText: String
+            if let screenContext = screenContext {
+                enhancedText = try await apiService.enhanceText(testText, with: prompt, using: model, screenContext: screenContext)
+            } else {
+                enhancedText = try await apiService.enhanceText(testText, with: prompt, using: model)
+            }
             
             await MainActor.run {
                 testResult = enhancedText

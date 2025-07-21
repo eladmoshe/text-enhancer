@@ -81,6 +81,12 @@ class MenuBarManager: ObservableObject {
         menu.addItem(statusMenuItem)
         NSLog("🔧 MenuBarManager: Added status item")
 
+        // Version info
+        let versionMenuItem = NSMenuItem(title: "Version \(AppVersion.fullVersion)", action: nil, keyEquivalent: "")
+        versionMenuItem.isEnabled = false
+        menu.addItem(versionMenuItem)
+        NSLog("🔧 MenuBarManager: Added version item: '\(versionMenuItem.title)'")
+
         menu.addItem(NSMenuItem.separator())
 
         // Master shortcut menu item
@@ -146,6 +152,11 @@ class MenuBarManager: ObservableObject {
         let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
+
+        // Open Log File
+        let logItem = NSMenuItem(title: "Open Log File", action: #selector(openLogFile), keyEquivalent: "l")
+        logItem.target = self
+        menu.addItem(logItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -427,6 +438,13 @@ class MenuBarManager: ObservableObject {
     
     @objc private func openSettings() {
         SettingsWindowManager.shared.showSettings(configManager: configManager)
+    }
+
+    // MARK: - Log File
+
+    @objc private func openLogFile() {
+        let url = Logger.shared.logFileURL
+        NSWorkspace.shared.open(url)
     }
     
     @objc private func configurationChanged() {

@@ -1,6 +1,13 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Version Management
+struct AppVersion {
+    static let buildNumber: Int = 1002
+    static let version: String = "1.0.2"
+    static let fullVersion: String = "\(version) (build \(buildNumber))"
+}
+
 @main
 struct TextEnhancerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -32,7 +39,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var configManager: ConfigurationManager!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Initialise logging *before* any other output
+        _ = Logger.shared
+
         print("=== TextEnhancer Starting ===")
+        print("🚀 Version: \(AppVersion.fullVersion)")
+        print("🔥 FORCED REBUILD - This should appear in logs if build is working!")
+        
+        // Debug: Write to file to confirm app is running
+        let debugMessage = """
+        === TextEnhancer Starting ===
+        🚀 Version: \(AppVersion.fullVersion)
+        📅 Started at: \(Date())
+        
+        """
+        let debugPath = "/Users/elad.moshe/my-code/text-llm-modify/debug.log"
+        try? debugMessage.write(to: URL(fileURLWithPath: debugPath), atomically: true, encoding: .utf8)
         
         // Hide from dock and prevent main window
         NSApp.setActivationPolicy(.accessory)
