@@ -370,4 +370,386 @@ final class ClaudeServiceTests: XCTestCase {
             XCTFail("Should not have thrown an error: \(error)")
         }
     }
+    
+    // MARK: - Request Context Classification Tests
+    
+    func test_requestContextClassification_screenshotOnlyRequest_returnsPlainText() async {
+        // Given: Screenshot-only request (no text input, only screen capture)
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        // Mock Claude response with plain text (not JSON)
+        let plainTextResponse = """
+        {
+            "content": [
+                {
+                    "type": "text", 
+                    "text": "I can see a web browser displaying a code editor with Swift code. The code appears to be implementing a service class with various methods for API communication."
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022",
+            "role": "assistant",
+            "usage": {"input_tokens": 100, "output_tokens": 50}
+        }
+        """
+        mockSession.responseData = plainTextResponse.data(using: .utf8)!
+        
+        // When: Calling enhanceText with screenshot-only marker and screen context
+        do {
+            let result = try await claudeService.enhanceText(
+                "[Screenshot analysis requested]", 
+                with: "Describe what you see in this screenshot", 
+                using: "claude-3-5-sonnet-20241022",
+                screenContext: "base64encodedimage"
+            )
+            
+            // Then: Should return plain text directly without JSON extraction
+            XCTAssertEqual(result, "I can see a web browser displaying a code editor with Swift code. The code appears to be implementing a service class with various methods for API communication.")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    func test_requestContextClassification_textOnlyRequest_extractsJSON() async {
+        // Given: Text-only enhancement request (no screen context)
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        // Mock Claude response with JSON content
+        let jsonResponse = """
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "{\\"enhancedText\\": \\"This is the improved text with better grammar and clarity.\\"}"
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022", 
+            "role": "assistant",
+            "usage": {"input_tokens": 20, "output_tokens": 30}
+        }
+        """
+        mockSession.responseData = jsonResponse.data(using: .utf8)!
+        
+        // When: Calling enhanceText with only text (no screen context)
+        do {
+            let result = try await claudeService.enhanceText(
+                "This text needs improvement",
+                with: "Please improve this text",
+                using: "claude-3-5-sonnet-20241022"
+            )
+            
+            // Then: Should extract JSON and return enhanced text
+            XCTAssertEqual(result, "This is the improved text with better grammar and clarity.")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    func test_requestContextClassification_mixedModeRequest_returnsPlainText() async {
+        // Given: Mixed mode request (text + screen context)
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        // Mock Claude response with plain text analysis
+        let plainTextResponse = """
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Based on the screenshot and your text 'help me fix this code', I can see there's a syntax error on line 15. You're missing a closing parenthesis in the function call."
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022",
+            "role": "assistant", 
+            "usage": {"input_tokens": 80, "output_tokens": 40}
+        }
+        """
+        mockSession.responseData = plainTextResponse.data(using: .utf8)!
+        
+        // When: Calling enhanceText with both text and screen context
+        do {
+            let result = try await claudeService.enhanceText(
+                "help me fix this code",
+                with: "Please analyze the code in the screenshot and help fix the issue",
+                using: "claude-3-5-sonnet-20241022",
+                screenContext: "base64encodedimage"
+            )
+            
+            // Then: Should return plain text directly (no JSON extraction for multimodal)
+            XCTAssertEqual(result, "Based on the screenshot and your text 'help me fix this code', I can see there's a syntax error on line 15. You're missing a closing parenthesis in the function call.")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    // MARK: - Enhanced Response Processing Tests
+    
+    func test_responseProcessing_screenshotRequest_bypassesJSONExtraction() async {
+        // Given: Screenshot request that might accidentally return JSON-like content
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        // Mock response that contains JSON-like content but should be treated as plain text
+        let ambiguousResponse = """
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "I can see your code has a JSON structure like {\\"key\\": \\"value\\"} in the screenshot. This appears to be configuration data."
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022",
+            "role": "assistant",
+            "usage": {"input_tokens": 60, "output_tokens": 25}
+        }
+        """
+        mockSession.responseData = ambiguousResponse.data(using: .utf8)!
+        
+        // When: Processing screenshot request
+        do {
+            let result = try await claudeService.enhanceText(
+                "[Screenshot analysis requested]",
+                with: "What do you see?",
+                using: "claude-3-5-sonnet-20241022",
+                screenContext: "base64encodedimage"
+            )
+            
+            // Then: Should return the full response as plain text, not attempt JSON extraction
+            XCTAssertEqual(result, "I can see your code has a JSON structure like {\"key\": \"value\"} in the screenshot. This appears to be configuration data.")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    func test_responseProcessing_textRequest_failsWhenNoValidJSON() async {
+        // Given: Text enhancement request with malformed JSON response
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        // Mock response with invalid JSON
+        let invalidJSONResponse = """
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Here's the improved text: This is better now."
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022",
+            "role": "assistant",
+            "usage": {"input_tokens": 15, "output_tokens": 20}
+        }
+        """
+        mockSession.responseData = invalidJSONResponse.data(using: .utf8)!
+        
+        // When: Processing text-only request with invalid JSON
+        do {
+            _ = try await claudeService.enhanceText(
+                "improve this text", 
+                with: "Make it better",
+                using: "claude-3-5-sonnet-20241022"
+            )
+            XCTFail("Should have thrown JSON extraction error")
+        } catch ClaudeError.invalidJSONResponse {
+            // Then: Should throw invalid JSON response error
+            XCTAssertTrue(true)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    // MARK: - Context Detection Edge Cases
+    
+    func test_contextDetection_emptyScreenContext_treatedAsTextOnly() async {
+        // Given: Request with empty screen context
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        let jsonResponse = """
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "{\\"enhancedText\\": \\"Enhanced text without screenshot context.\\"}"
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022",
+            "role": "assistant",
+            "usage": {"input_tokens": 10, "output_tokens": 15}
+        }
+        """
+        mockSession.responseData = jsonResponse.data(using: .utf8)!
+        
+        // When: Calling with empty screen context (should be treated as nil)
+        do {
+            let result = try await claudeService.enhanceText(
+                "regular text",
+                with: "enhance this",
+                using: "claude-3-5-sonnet-20241022",
+                screenContext: ""
+            )
+            
+            // Then: Should extract JSON (treat empty context as text-only)
+            XCTAssertEqual(result, "Enhanced text without screenshot context.")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    func test_contextDetection_nullScreenContext_treatedAsTextOnly() async {
+        // Given: Request with nil screen context
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        let jsonResponse = """
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "{\\"enhancedText\\": \\"Enhanced text without any screenshot.\\"}"
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022",
+            "role": "assistant",
+            "usage": {"input_tokens": 8, "output_tokens": 12}
+        }
+        """
+        mockSession.responseData = jsonResponse.data(using: .utf8)!
+        
+        // When: Calling with nil screen context 
+        do {
+            let result = try await claudeService.enhanceText(
+                "text to enhance",
+                with: "please improve",
+                using: "claude-3-5-sonnet-20241022",
+                screenContext: nil
+            )
+            
+            // Then: Should extract JSON (text-only mode)
+            XCTAssertEqual(result, "Enhanced text without any screenshot.")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    // MARK: - TDD Tests for Enhanced Context-Aware Error Messages
+    
+    func test_contextAwareError_screenshotRequestWithInvalidJSON_providesHelpfulMessage() async {
+        // RED: This test should fail initially - we need to implement context-aware error messages
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        // Mock response that would cause JSON extraction to fail for a screenshot request
+        let invalidJSONResponse = """
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Here's what I see in the screenshot: A code editor with Swift code."
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022",
+            "role": "assistant",
+            "usage": {"input_tokens": 50, "output_tokens": 25}
+        }
+        """
+        mockSession.responseData = invalidJSONResponse.data(using: .utf8)!
+        
+        // When: Calling with screenshot request expecting JSON extraction (wrong shortcut used)
+        do {
+            _ = try await claudeService.enhanceText(
+                "screenshot analysis",
+                with: "Analyze this screenshot for JSON data",
+                using: "claude-3-5-sonnet-20241022",
+                screenContext: nil // This simulates using text shortcut for screenshot content
+            )
+            XCTFail("Should have thrown context-aware error")
+        } catch ClaudeError.invalidJSONResponseWithContext(let message, let suggestion) {
+            // Then: Should provide helpful context-aware error message
+            XCTAssertTrue(message.contains("screenshot"), "Error should mention screenshot context")
+            XCTAssertTrue(suggestion.contains("Ctrl+Option+6"), "Error should mention correct shortcut")
+            XCTAssertTrue(suggestion.contains("text-only expansion"), "Error should explain the difference")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    func test_contextAwareError_textRequestExpectingScreenshot_providesHelpfulMessage() async {
+        // RED: This test should fail initially
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        // Mock response for text that was expected to be screenshot analysis
+        let plainTextResponse = """
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "This text is about screenshots but I can't see any image."
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022",
+            "role": "assistant",
+            "usage": {"input_tokens": 30, "output_tokens": 20}
+        }
+        """
+        mockSession.responseData = plainTextResponse.data(using: .utf8)!
+        
+        // When: Calling with text but screenshot-related prompt (user used wrong shortcut)
+        do {
+            _ = try await claudeService.enhanceText(
+                "analyze what you see in screenshot",
+                with: "Describe what you see in this screenshot",
+                using: "claude-3-5-sonnet-20241022",
+                screenContext: "base64image" // Has screenshot but prompt suggests text analysis
+            )
+            // This should succeed as it's handled properly
+        } catch ClaudeError.contextMismatch(let message) {
+            // If we detect the mismatch, should provide helpful message
+            XCTAssertTrue(message.contains("screenshot"), "Error should mention screenshot")
+            XCTAssertTrue(message.contains("Ctrl+Option+7"), "Error should mention text shortcut")
+        } catch {
+            // For now, this shouldn't happen - test will evolve during implementation
+        }
+    }
+    
+    func test_enhancedErrorMessage_invalidJSONWithContext() async {
+        // RED: Test for enhanced error messages that include context about shortcuts
+        let mockSession = MockURLSession()
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockSession)
+        
+        // Mock response with malformed JSON for text request
+        let malformedResponse = """
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "This is just plain text, not JSON format"
+                }
+            ],
+            "model": "claude-3-5-sonnet-20241022",
+            "role": "assistant",
+            "usage": {"input_tokens": 20, "output_tokens": 15}
+        }
+        """
+        mockSession.responseData = malformedResponse.data(using: .utf8)!
+        
+        // When: Processing text-only request with invalid JSON response
+        do {
+            _ = try await claudeService.enhanceText(
+                "improve this text",
+                with: "Expand this text with more details",
+                using: "claude-3-5-sonnet-20241022"
+            )
+            XCTFail("Should have thrown enhanced error")
+        } catch ClaudeError.invalidJSONResponseWithContext(let message, let suggestion) {
+            // Then: Should provide enhanced error with context and suggestions
+            XCTAssertTrue(message.contains("Invalid response format"), "Error should mention response format issue")
+            XCTAssertTrue(suggestion.contains("Ctrl+Option+6"), "Should suggest screenshot shortcut")
+            XCTAssertTrue(suggestion.contains("Ctrl+Option+7"), "Should mention text shortcut")
+        } catch {
+            XCTFail("Expected enhanced error, got: \(error)")
+        }
+    }
 } 

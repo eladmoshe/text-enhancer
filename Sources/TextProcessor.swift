@@ -366,7 +366,7 @@ class TextProcessor: ObservableObject {
         let shortcut = configManager.configuration.shortcuts.first { $0.prompt == prompt }
         print("🔧 TextProcessor: Found shortcut: \(shortcut?.id ?? "none") for prompt: '\(prompt)'")
         let provider = shortcut?.effectiveProvider ?? .claude
-        let model = shortcut?.effectiveModel ?? "claude-3-5-sonnet-20241022"
+        let model = shortcut?.effectiveModel ?? "claude-sonnet-4-20250514"
         
         await processSelectedText(with: prompt, using: provider, model: model)
     }

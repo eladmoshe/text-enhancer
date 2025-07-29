@@ -352,7 +352,7 @@ struct SettingsView: View {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(
                     apiKey: claudeApiKey,
-                    model: "claude-3-5-sonnet-20241022", // Default model for global config
+                    model: "claude-sonnet-4-20250514", // Default model for global config
                     enabled: claudeEnabled
                 ),
                 openai: APIProviderConfig(
@@ -491,7 +491,7 @@ struct ShortcutRowView: View {
     
     private func formatModelName(_ model: String) -> String {
         switch model {
-        case "claude-3-5-sonnet-20241022": return "Sonnet"
+        case "claude-sonnet-4-20250514": return "Sonnet"
         case "claude-opus-4-20250514": return "Opus"
         case "gpt-4o": return "4o"
         case "gpt-4o-mini": return "4o mini"

@@ -4,7 +4,7 @@
   "enableNotifications": true,
   "apiProviders": {
     "claude": {
-      "model": "claude-3-5-sonnet-20241022",
+      "model": "claude-sonnet-4-20250514",
       "apiKey": "",
       "enabled": true
     },
@@ -51,8 +51,9 @@
         "opt"
       ],
       "name": "Expand",
-      "model": "claude-3-5-sonnet-20241022",
-      "keyCode": 22
+      "model": "claude-sonnet-4-20250514",
+      "keyCode": 23,
+      "includeScreenshot": false
     },
     {
       "provider": "claude",
@@ -63,8 +64,8 @@
         "opt"
       ],
       "name": "Describe Screen",
-      "model": "claude-3-5-sonnet-20241022",
-      "keyCode": 23,
+      "model": "claude-sonnet-4-20250514",
+      "keyCode": 22,
       "includeScreenshot": true
     },
     {

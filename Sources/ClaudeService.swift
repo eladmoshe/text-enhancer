@@ -121,24 +121,158 @@ class ClaudeService: ObservableObject {
             throw ClaudeError.noContent
         }
         
-        // Check if this is a screenshot-only request
-        let isScreenshotOnly = text == "[Screenshot analysis requested]"
+        // Request Context Classification System
+        let requestContext = classifyRequestContext(text: text, screenContext: screenContext)
+        debugLog("Request classified as: \(requestContext)")
         
-        if isScreenshotOnly {
-            // For screenshot analysis, return the content directly
-            print("✅ ClaudeService: Screenshot analysis completed successfully")
+        switch requestContext {
+        case .screenshotOnly, .mixedMode:
+            // For screenshot analysis or multimodal requests, return the content directly as plain text
+            debugLog("Returning plain text response for \(requestContext) request")
+            print("✅ ClaudeService: Screenshot/multimodal analysis completed successfully")
             return content
-        } else {
-            // For text enhancement, extract JSON from the response content
+            
+        case .textOnly:
+            // For text enhancement only, extract JSON from the response content
+            debugLog("Extracting JSON response for text-only request")
             do {
                 let enhancementResponse = try JSONExtractor.extractJSONPayload(from: content)
                 print("✅ ClaudeService: Enhancement completed successfully")
                 return enhancementResponse.enhancedText
             } catch {
+                debugLog("JSON extraction failed: \(error)")
                 print("❌ ClaudeService: JSON extraction failed: \(error)")
-                throw ClaudeError.invalidJSONResponse(error)
+                
+                // Context-aware error messages for better user experience
+                let contextAwareError = createContextAwareError(
+                    originalError: error, 
+                    text: text, 
+                    prompt: prompt, 
+                    screenContext: screenContext,
+                    content: content
+                )
+                throw contextAwareError
             }
         }
+    }
+    
+    // MARK: - Context-Aware Error Handling
+    
+    private func createContextAwareError(originalError: Error, text: String, prompt: String, screenContext: String?, content: String) -> ClaudeError {
+        // Analyze the request context to provide helpful error messages
+        let hasScreenContext = screenContext != nil && !screenContext!.isEmpty
+        
+        // Check if this looks like a screenshot-related request but has no screen context
+        let isScreenshotRelatedText = isScreenshotRelated(text: text) || isScreenshotRelated(text: prompt)
+        
+        if isScreenshotRelatedText && !hasScreenContext {
+            let message = """
+            🖼️ Screenshot analysis requested but no screenshot provided
+            
+            It looks like you're trying to analyze a screenshot, but the system couldn't find one.
+            """
+            
+            let suggestion = """
+            Try this:
+            • Use Ctrl+Option+6 for screenshot analysis (captures screen automatically)
+            • Use Ctrl+Option+7 for text-only expansion
+            
+            Current shortcut behavior:
+            • Ctrl+Option+6: Screenshot analysis with screen capture
+            • Ctrl+Option+7: Text expansion without screenshots
+            """
+            
+            return ClaudeError.invalidJSONResponseWithContext(message, suggestion)
+        }
+        
+        // Check if this might be a text request that should use the screenshot shortcut
+        if !hasScreenContext && containsJSONHints(in: content) {
+            let message = """
+            ⚠️ Invalid response format from Claude
+            
+            Expected structured JSON response but received plain text.
+            """
+            
+            let suggestion = """
+            This might help:
+            • For screenshot analysis: Use Ctrl+Option+6 (automatically captures screen)
+            • For text expansion: Use Ctrl+Option+7 (works with selected text)
+            • For AI analysis of images: Use Ctrl+Option+6 with visual content
+            
+            The response format suggests this might need screenshot context.
+            """
+            
+            return ClaudeError.invalidJSONResponseWithContext(message, suggestion)
+        }
+        
+        // Default enhanced error with context
+        let message = """
+        ⚠️ Invalid response format from Claude
+        
+        The AI response couldn't be processed as expected.
+        """
+        
+        let suggestion = """
+        Quick fixes:
+        • Ctrl+Option+6: Screenshot analysis (with automatic screen capture)
+        • Ctrl+Option+7: Text expansion (selected text only)
+        
+        If this keeps happening, try the other shortcut or check your API key in Settings.
+        """
+        
+        return ClaudeError.invalidJSONResponseWithContext(message, suggestion)
+    }
+    
+    private func isScreenshotRelated(text: String) -> Bool {
+        let screenshotKeywords = ["screenshot", "screen", "image", "picture", "visual", "see", "display", "window", "interface", "UI", "analyze what you see"]
+        let lowercaseText = text.lowercased()
+        return screenshotKeywords.contains { lowercaseText.contains($0) }
+    }
+    
+    private func containsJSONHints(in content: String) -> Bool {
+        // Check if the response looks like it might contain JSON-like structures but failed parsing
+        let jsonHints = ["{", "}", "\"key\":", "\"value\":", "enhancedText", "analysis"]
+        return jsonHints.contains { content.contains($0) }
+    }
+
+    // MARK: - Request Context Classification
+    
+    private enum RequestContext {
+        case screenshotOnly    // Only screenshot, no meaningful text input
+        case textOnly         // Only text, no screenshot 
+        case mixedMode        // Both text and screenshot
+    }
+    
+    private func classifyRequestContext(text: String, screenContext: String?) -> RequestContext {
+        // Enhanced context detection with proper empty string handling
+        let hasValidScreenContext = screenContext != nil && !screenContext!.isEmpty
+        let isScreenshotOnlyRequest = text == "[Screenshot analysis requested]"
+        let hasValidTextInput = !text.isEmpty && !isScreenshotOnlyRequest
+        
+        debugLog("Context classification - text: '\(text.prefix(50))...', screenContext: \(screenContext != nil ? "present" : "nil"), isEmpty: \(screenContext?.isEmpty ?? true)")
+        debugLog("hasValidScreenContext: \(hasValidScreenContext), isScreenshotOnlyRequest: \(isScreenshotOnlyRequest), hasValidTextInput: \(hasValidTextInput)")
+        
+        if hasValidScreenContext && hasValidTextInput {
+            // Both valid text and screenshot context
+            debugLog("Classified as mixedMode")
+            return .mixedMode
+        } else if hasValidScreenContext || isScreenshotOnlyRequest {
+            // Screenshot only (either explicit marker or just screenshot without meaningful text)
+            debugLog("Classified as screenshotOnly")
+            return .screenshotOnly
+        } else {
+            // Text only (no screenshot context)
+            debugLog("Classified as textOnly")
+            return .textOnly
+        }
+    }
+    
+    // MARK: - Structured Debug Logging
+    
+    private func debugLog(_ message: String) {
+        #if DEBUG
+        print("🔧 ClaudeService: \(message)")
+        #endif
     }
     
     internal func createRequest(text: String, prompt: String, apiKey: String, model: String, screenContext: String? = nil) throws -> URLRequest {
@@ -379,6 +513,8 @@ enum ClaudeError: LocalizedError {
     case apiError(Int, Data)
     case noContent
     case invalidJSONResponse(Error)
+    case contextMismatch(String)
+    case invalidJSONResponseWithContext(String, String)
     
     var errorDescription: String? {
         switch self {
@@ -427,6 +563,10 @@ enum ClaudeError: LocalizedError {
             return "⚠️ No response content received from Claude API"
         case .invalidJSONResponse(let error):
             return "⚠️ Invalid response format from Claude: \(error.localizedDescription)"
+        case .contextMismatch(let message):
+            return message
+        case .invalidJSONResponseWithContext(let message, let suggestion):
+            return "\(message)\n\n💡 \(suggestion)"
         }
     }
     
@@ -466,6 +606,10 @@ enum ClaudeError: LocalizedError {
             return "ClaudeError.noContent"
         case .invalidJSONResponse(let error):
             return "ClaudeError.invalidJSONResponse(\(error))"
+        case .contextMismatch(let message):
+            return "ClaudeError.contextMismatch(\(message))"
+        case .invalidJSONResponseWithContext(let message, let suggestion):
+            return "ClaudeError.invalidJSONResponseWithContext(\(message), \(suggestion))"
         }
     }
 } 

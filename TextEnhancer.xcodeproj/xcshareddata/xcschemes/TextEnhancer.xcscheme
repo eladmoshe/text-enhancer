@@ -6,6 +6,24 @@
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
       buildArchitectures = "Automatic">
+      <PostActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Install to Applications (Required for Permissions)"
+               scriptText = "# CRITICAL: This app is USELESS without accessibility permissions&#10;# Install to Applications folder to ensure permissions work&#10;&#10;APP_NAME=&quot;TextEnhancer&quot;&#10;INSTALL_PATH=&quot;/Applications/${APP_NAME}.app&quot;&#10;&#10;echo &quot;&#x1f680; Installing ${APP_NAME} to Applications for proper permissions...&quot;&#10;&#10;# Remove old installation&#10;rm -rf &quot;${INSTALL_PATH}&quot; 2&gt;/dev/null || true&#10;&#10;# Install new build&#10;cp -R &quot;${BUILT_PRODUCTS_DIR}/${APP_NAME}.app&quot; &quot;/Applications/&quot;&#10;&#10;echo &quot;&#x2705; Installed to: ${INSTALL_PATH}&quot;&#10;echo &quot;&#x26a0;&#xfe0f;  REMEMBER: Enable accessibility permissions for this app to work!&quot;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "99C025B12E2D7DF400318551"
+                     BuildableName = "TextEnhancer.app"
+                     BlueprintName = "TextEnhancer"
+                     ReferencedContainer = "container:TextEnhancer.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PostActions>
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -22,24 +40,6 @@
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
-      <PostActions>
-         <ExecutionAction
-            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
-            <ActionContent
-               title = "Install to Applications (Required for Permissions)"
-               scriptText = "# CRITICAL: This app is USELESS without accessibility permissions&#10;# Install to Applications folder to ensure permissions work&#10;&#10;APP_NAME=&quot;TextEnhancer&quot;&#10;INSTALL_PATH=&quot;/Applications/${APP_NAME}.app&quot;&#10;&#10;echo &quot;🚀 Installing ${APP_NAME} to Applications for proper permissions...&quot;&#10;&#10;# Remove old installation&#10;rm -rf &quot;${INSTALL_PATH}&quot; 2&gt;/dev/null || true&#10;&#10;# Install new build&#10;cp -R &quot;${BUILT_PRODUCTS_DIR}/${APP_NAME}.app&quot; &quot;/Applications/&quot;&#10;&#10;echo &quot;✅ Installed to: ${INSTALL_PATH}&quot;&#10;echo &quot;⚠️  REMEMBER: Enable accessibility permissions for this app to work!&quot;">
-               <EnvironmentBuildable>
-                  <BuildableReference
-                     BuildableIdentifier = "primary"
-                     BlueprintIdentifier = "99C025B12E2D7DF400318551"
-                     BuildableName = "TextEnhancer.app"
-                     BlueprintName = "TextEnhancer"
-                     ReferencedContainer = "container:TextEnhancer.xcodeproj">
-                  </BuildableReference>
-               </EnvironmentBuildable>
-            </ActionContent>
-         </ExecutionAction>
-      </PostActions>
    </BuildAction>
    <TestAction
       buildConfiguration = "Debug"

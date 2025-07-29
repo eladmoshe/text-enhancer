@@ -97,4 +97,66 @@ final class ConfigurationManagerDefaultConfigTests: XCTestCase {
         XCTAssertEqual(configManager.configuration.apiProviders.claude.apiKey, "test-claude-key")
         XCTAssertEqual(configManager.configuration.apiProviders.openai.apiKey, "test-openai-key")
     }
+    
+    // MARK: - TDD Tests for KeyCode Mapping Fix
+    
+    func testDefaultConfigHasCorrectKeyCodeMappingsForScreenshotFeatures() throws {
+        // RED: This test should fail initially because keyCodes are swapped
+        let tempDir = try TemporaryDirectory()
+        let configManager = ConfigurationManager(appSupportDir: tempDir.url)
+        
+        // Find the expand and describe-screen shortcuts
+        let expandShortcut = configManager.configuration.shortcuts.first { $0.id == "expand" }
+        let describeScreenShortcut = configManager.configuration.shortcuts.first { $0.id == "describe-screen" }
+        
+        XCTAssertNotNil(expandShortcut, "Should have expand shortcut")
+        XCTAssertNotNil(describeScreenShortcut, "Should have describe-screen shortcut")
+        
+        // The key mappings should be intuitive: 
+        // Ctrl+Option+6 (keyCode 22) should be for screenshot analysis (describe-screen, includeScreenshot: true)
+        // Ctrl+Option+7 (keyCode 23) should be for text expansion (expand, includeScreenshot: false)
+        XCTAssertEqual(describeScreenShortcut?.keyCode, 22, "Ctrl+Option+6 should trigger describe-screen (screenshot analysis)")
+        XCTAssertTrue(describeScreenShortcut?.includeScreenshot ?? false, "describe-screen should include screenshot")
+        
+        XCTAssertEqual(expandShortcut?.keyCode, 23, "Ctrl+Option+7 should trigger expand (text only)")
+        XCTAssertFalse(expandShortcut?.includeScreenshot ?? true, "expand should not include screenshot")
+    }
+    
+    func testScreenshotShortcutHasCorrectConfiguration() throws {
+        // RED: This test should fail initially
+        let tempDir = try TemporaryDirectory()
+        let configManager = ConfigurationManager(appSupportDir: tempDir.url)
+        
+        let describeScreenShortcut = configManager.configuration.shortcuts.first { $0.id == "describe-screen" }
+        
+        XCTAssertNotNil(describeScreenShortcut, "Should have describe-screen shortcut")
+        guard let shortcut = describeScreenShortcut else {
+            XCTFail("describe-screen shortcut should not be nil")
+            return
+        }
+        
+        XCTAssertEqual(shortcut.keyCode, 22, "describe-screen should be mapped to keyCode 22 (Ctrl+Option+6)")
+        XCTAssertEqual(shortcut.includeScreenshot, true, "describe-screen must include screenshot")
+        XCTAssertEqual(shortcut.modifiers, [.control, .option], "Should have correct modifiers")
+        XCTAssertTrue(shortcut.prompt.contains("screenshot"), "Prompt should reference screenshot")
+    }
+    
+    func testTextExpansionShortcutHasCorrectConfiguration() throws {
+        // RED: This test should fail initially
+        let tempDir = try TemporaryDirectory()
+        let configManager = ConfigurationManager(appSupportDir: tempDir.url)
+        
+        let expandShortcut = configManager.configuration.shortcuts.first { $0.id == "expand" }
+        
+        XCTAssertNotNil(expandShortcut, "Should have expand shortcut")
+        guard let shortcut = expandShortcut else {
+            XCTFail("expand shortcut should not be nil")
+            return
+        }
+        
+        XCTAssertEqual(shortcut.keyCode, 23, "expand should be mapped to keyCode 23 (Ctrl+Option+7)")
+        XCTAssertNotEqual(shortcut.includeScreenshot, true, "expand should not include screenshot")
+        XCTAssertEqual(shortcut.modifiers, [.control, .option], "Should have correct modifiers")
+        XCTAssertTrue(shortcut.prompt.contains("Expand"), "Prompt should reference text expansion")
+    }
 } 
