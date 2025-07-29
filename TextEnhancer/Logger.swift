@@ -1,7 +1,9 @@
 import Foundation
 
-/// Simple logger that redirects `stdout` / `stderr` to a persistent log file in `~/Library/Logs/TextEnhancer/debug.log`.
-/// Initialising the shared instance once, early in app launch, is enough to capture all future `print` / `NSLog` output.
+/// Simple logger that redirects `stdout` / `stderr` to a persistent log file in
+/// `~/Library/Logs/TextEnhancer/debug.log`.
+/// Initialising the shared instance once, early in app launch, is enough to capture all future `print` / `NSLog`
+/// output.
 final class Logger {
     static let shared = Logger()
 
@@ -26,4 +28,4 @@ final class Logger {
         let header = "\n=== TextEnhancer log started: \(Date()) ===\n"
         fputs(header, stderr)
     }
-} 
+}

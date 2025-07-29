@@ -1,75 +1,77 @@
-import Foundation
 import Carbon
+import Foundation
 
 class ConfigurationManager: ObservableObject {
     @Published var configuration: AppConfiguration = .default
-    
+
     private let configFile: URL
-    
+
     var claudeApiKey: String? {
         guard configuration.apiProviders.claude.enabled,
-              !configuration.apiProviders.claude.apiKey.isEmpty else {
+              !configuration.apiProviders.claude.apiKey.isEmpty
+        else {
             return nil
         }
         return configuration.apiProviders.claude.apiKey
     }
-    
+
     var openaiApiKey: String? {
         guard configuration.apiProviders.openai.enabled,
-              !configuration.apiProviders.openai.apiKey.isEmpty else {
+              !configuration.apiProviders.openai.apiKey.isEmpty
+        else {
             return nil
         }
         return configuration.apiProviders.openai.apiKey
     }
-    
+
     func apiKey(for provider: APIProvider) -> String? {
         switch provider {
         case .claude:
-            return claudeApiKey
+            claudeApiKey
         case .openai:
-            return openaiApiKey
+            openaiApiKey
         }
     }
-    
+
     func model(for provider: APIProvider) -> String {
         switch provider {
         case .claude:
-            return configuration.apiProviders.claude.model
+            configuration.apiProviders.claude.model
         case .openai:
-            return configuration.apiProviders.openai.model
+            configuration.apiProviders.openai.model
         }
     }
-    
+
     func isEnabled(provider: APIProvider) -> Bool {
         switch provider {
         case .claude:
-            return configuration.apiProviders.claude.enabled
+            configuration.apiProviders.claude.enabled
         case .openai:
-            return configuration.apiProviders.openai.enabled
+            configuration.apiProviders.openai.enabled
         }
     }
-    
+
     init(appSupportDir: URL? = nil) {
         let configDirectory: URL
-        if let appSupportDir = appSupportDir {
+        if let appSupportDir {
             configDirectory = appSupportDir
         } else {
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             configDirectory = appSupport.appendingPathComponent("TextEnhancer")
         }
-        
-        self.configFile = configDirectory.appendingPathComponent("config.json")
-        
+
+        configFile = configDirectory.appendingPathComponent("config.json")
+
         // Ensure the config directory exists
         try? FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
-        
+
         loadConfiguration()
     }
-    
+
     // MARK: - Configuration Operations
-    
+
     // MARK: - Configuration File Operations
-    
+
     func saveConfiguration(_ config: AppConfiguration) {
         do {
             let encoder = JSONEncoder()
@@ -77,32 +79,32 @@ class ConfigurationManager: ObservableObject {
             let data = try encoder.encode(config)
             try data.write(to: configFile)
             print("✅ Configuration saved to: \(configFile.path)")
-            
+
             // Update the published configuration
             DispatchQueue.main.async {
                 self.configuration = config
             }
-            
+
             // Post notification for configuration change
             NotificationCenter.default.post(name: .configurationChanged, object: nil)
         } catch {
             print("❌ Failed to save configuration: \(error)")
         }
     }
-    
+
     private func bundledDefaultConfigURL() -> URL? {
         Bundle.main.url(forResource: "config.default", withExtension: "json")
     }
-    
+
     func loadConfiguration() {
         print("🔧 ConfigurationManager: Loading configuration...")
         print("🔧 ConfigurationManager: Looking for config at: \(configFile.path)")
-        
+
         // Try to load from Application Support directory
         if FileManager.default.fileExists(atPath: configFile.path) {
             do {
                 let data = try Data(contentsOf: configFile)
-                self.configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
+                configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
                 print("✅ Configuration loaded from: \(configFile.path)")
                 print("🔧 ConfigurationManager: Loaded \(configuration.shortcuts.count) shortcuts")
                 return
@@ -112,12 +114,12 @@ class ConfigurationManager: ObservableObject {
         } else {
             print("🔧 ConfigurationManager: Config file does not exist, checking for bundled defaults")
         }
-        
+
         // Try to load bundled default configuration
         if let bundledConfigURL = bundledDefaultConfigURL() {
             do {
                 let data = try Data(contentsOf: bundledConfigURL)
-                self.configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
+                configuration = try JSONDecoder().decode(AppConfiguration.self, from: data)
                 print("✅ Configuration loaded from bundled defaults: \(bundledConfigURL.path)")
                 print("🔧 ConfigurationManager: Loaded \(configuration.shortcuts.count) shortcuts from bundle")
                 return
@@ -127,7 +129,7 @@ class ConfigurationManager: ObservableObject {
         } else {
             print("🔧 ConfigurationManager: No bundled default config found")
         }
-        
+
         // Fall back to hardcoded default configuration and save it
         configuration = AppConfiguration.default
         print("ℹ️  Using hardcoded default configuration with \(configuration.shortcuts.count) shortcuts")
@@ -146,7 +148,7 @@ struct AppConfiguration: Codable {
     let autoSave: Bool
     let logLevel: String
     let apiProviders: APIProviders
-    
+
     static let `default` = AppConfiguration(
         shortcuts: [
             ShortcutConfiguration(
@@ -158,7 +160,7 @@ struct AppConfiguration: Codable {
                 provider: .claude,
                 model: "claude-3-5-sonnet-20241022",
                 includeScreenshot: nil
-            )
+            ),
         ],
         maxTokens: 1000,
         timeout: 30.0,
@@ -179,17 +181,17 @@ struct ShortcutConfiguration: Codable, Identifiable {
     let provider: APIProvider
     let model: String
     let includeScreenshot: Bool?
-    
+
     var effectiveProvider: APIProvider {
-        return provider
+        provider
     }
-    
+
     var effectiveModel: String {
-        return model
+        model
     }
-    
+
     var effectiveIncludeScreenshot: Bool {
-        return includeScreenshot ?? false
+        includeScreenshot ?? false
     }
 }
 
@@ -198,7 +200,7 @@ struct ShortcutConfiguration: Codable, Identifiable {
 struct APIProviders: Codable {
     let claude: APIProviderConfig
     let openai: APIProviderConfig
-    
+
     static let `default` = APIProviders(
         claude: APIProviderConfig(
             apiKey: "",
@@ -220,13 +222,13 @@ struct APIProviderConfig: Codable {
 }
 
 enum APIProvider: String, Codable, CaseIterable {
-    case claude = "claude"
-    case openai = "openai"
-    
+    case claude
+    case openai
+
     var displayName: String {
         switch self {
-        case .claude: return "Claude"
-        case .openai: return "OpenAI"
+        case .claude: "Claude"
+        case .openai: "OpenAI"
         }
     }
 }
@@ -235,31 +237,31 @@ enum ModifierKey: String, Codable, CaseIterable {
     case command = "cmd"
     case control = "ctrl"
     case option = "opt"
-    case shift = "shift"
-    
+    case shift
+
     var carbonValue: UInt32 {
         switch self {
         case .command:
-            return UInt32(cmdKey)
+            UInt32(cmdKey)
         case .control:
-            return UInt32(controlKey)
+            UInt32(controlKey)
         case .option:
-            return UInt32(optionKey)
+            UInt32(optionKey)
         case .shift:
-            return UInt32(shiftKey)
+            UInt32(shiftKey)
         }
     }
-    
+
     var displayName: String {
         switch self {
         case .command:
-            return "⌘"
+            "⌘"
         case .control:
-            return "⌃"
+            "⌃"
         case .option:
-            return "⌥"
+            "⌥"
         case .shift:
-            return "⇧"
+            "⇧"
         }
     }
 }
@@ -267,4 +269,4 @@ enum ModifierKey: String, Codable, CaseIterable {
 // Notification names
 extension Notification.Name {
     static let configurationChanged = Notification.Name("configurationChanged")
-} 
+}

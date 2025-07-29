@@ -14,14 +14,14 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
     private var lastAccessibilityStatus = false
     @Published var isRetrying = false
     private var retryInfo: RetryNotificationInfo?
-    
+
     init(shortcutManager: ShortcutManager, configManager: ConfigurationManager, textProcessor: TextProcessor) {
         self.shortcutManager = shortcutManager
         self.configManager = configManager
         self.textProcessor = textProcessor
-        
+
         super.init()
-        
+
         // Listen for processing status changes
         NotificationCenter.default.addObserver(
             self,
@@ -29,14 +29,14 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
             name: .textProcessingStarted,
             object: nil
         )
-        
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(processingFinished),
             name: .textProcessingFinished,
             object: nil
         )
-        
+
         // Listen for retry operations
         NotificationCenter.default.addObserver(
             self,
@@ -44,20 +44,20 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
             name: .retryingOperation,
             object: nil
         )
-        
+
         // Request notification permissions if enabled
         if configManager.configuration.enableNotifications {
             requestNotificationPermissions()
         }
-        
+
         // Set initial accessibility status and log it
         lastAccessibilityStatus = AXIsProcessTrusted()
         print("🔍 Initial accessibility status: \(lastAccessibilityStatus)")
         print("📋 Bundle ID: \(Bundle.main.bundleIdentifier ?? "nil")")
-        
+
         // Start periodic permission checking
         startPermissionMonitoring()
-        
+
         // Listen for configuration changes
         NotificationCenter.default.addObserver(
             self,
@@ -66,13 +66,13 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
             object: nil
         )
     }
-    
+
     func setupMenu(for statusItem: NSStatusItem) {
         NSLog("🔧 MenuBarManager: Setting up menu...")
         self.statusItem = statusItem
-        
+
         let menu = NSMenu()
-        
+
         // Status item
         let statusMenuItem = NSMenuItem(title: "TextEnhancer", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
@@ -88,11 +88,15 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         menu.addItem(NSMenuItem.separator())
 
         // Master shortcut menu item
-        let masterShortcutItem = NSMenuItem(title: "⌃⌥⇥ - Show All Shortcuts", action: #selector(showMasterShortcutMenu), keyEquivalent: "")
+        let masterShortcutItem = NSMenuItem(
+            title: "⌃⌥⇥ - Show All Shortcuts",
+            action: #selector(showPrimaryShortcutMenu),
+            keyEquivalent: ""
+        )
         masterShortcutItem.target = self
         masterShortcutItem.toolTip = "Show floating menu with all shortcuts"
         menu.addItem(masterShortcutItem)
-        
+
         // Shortcut actions - make them clickable from menu
         let shortcuts = configManager.configuration.shortcuts
         if shortcuts.isEmpty {
@@ -102,7 +106,11 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         } else {
             for shortcut in shortcuts {
                 let shortcutDisplay = formatShortcutDisplay(shortcut.modifiers, shortcut.keyCode)
-                let shortcutMenuItem = NSMenuItem(title: "\(shortcutDisplay) - \(shortcut.name)", action: #selector(handleMenuShortcut(_:)), keyEquivalent: "")
+                let shortcutMenuItem = NSMenuItem(
+                    title: "\(shortcutDisplay) - \(shortcut.name)",
+                    action: #selector(handleMenuShortcut(_:)),
+                    keyEquivalent: ""
+                )
                 shortcutMenuItem.target = self
                 shortcutMenuItem.representedObject = shortcut
                 shortcutMenuItem.toolTip = "Click to \(shortcut.name.lowercased())"
@@ -127,16 +135,17 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
 
         // Screen recording permission status - always get fresh status
         NSLog("🔧 MenuBarManager: Adding screen recording item...")
-        let screenRecordingStatus: Bool
-        if #available(macOS 10.15, *) {
-            screenRecordingStatus = CGPreflightScreenCaptureAccess()
+        let screenRecordingStatus: Bool = if #available(macOS 10.15, *) {
+            CGPreflightScreenCaptureAccess()
         } else {
-            screenRecordingStatus = true // Always enabled on older macOS
+            true // Always enabled on older macOS
         }
-        
+
         let screenRecordingItem = NSMenuItem(
-            title: screenRecordingStatus ? "✅ Screen Recording: Enabled" : "⚠️ Screen Recording: Disabled (Click to enable)",
-            action: screenRecordingStatus ? #selector(debugPermissionStatus) : #selector(requestScreenRecordingPermissions),
+            title: screenRecordingStatus ? "✅ Screen Recording: Enabled" :
+                "⚠️ Screen Recording: Disabled (Click to enable)",
+            action: screenRecordingStatus ? #selector(debugPermissionStatus) :
+                #selector(requestScreenRecordingPermissions),
             keyEquivalent: ""
         )
         screenRecordingItem.target = self
@@ -155,16 +164,24 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         let logItem = NSMenuItem(title: "Open Log File", action: #selector(openLogFile), keyEquivalent: "l")
         logItem.target = self
         menu.addItem(logItem)
-        
+
         // Refresh Status (for debugging)
-        let refreshItem = NSMenuItem(title: "🔄 Refresh Status", action: #selector(manualRefreshStatus), keyEquivalent: "")
+        let refreshItem = NSMenuItem(
+            title: "🔄 Refresh Status",
+            action: #selector(manualRefreshStatus),
+            keyEquivalent: ""
+        )
         refreshItem.target = self
         menu.addItem(refreshItem)
 
         menu.addItem(NSMenuItem.separator())
 
         // Force restart option
-        let restartItem = NSMenuItem(title: "🔄 Force Restart App", action: #selector(forceRestartApp), keyEquivalent: "r")
+        let restartItem = NSMenuItem(
+            title: "🔄 Force Restart App",
+            action: #selector(forceRestartApp),
+            keyEquivalent: "r"
+        )
         restartItem.target = self
         menu.addItem(restartItem)
 
@@ -176,196 +193,202 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         statusItem.menu = menu
         menu.delegate = self
         NSLog("🔧 MenuBarManager: Menu setup complete! Total items: \(menu.items.count)")
-        NSLog("🔧 MenuBarManager: Menu items: \(menu.items.map { $0.title })")
+        NSLog("🔧 MenuBarManager: Menu items: \(menu.items.map(\.title))")
     }
-    
+
     // MARK: - NSMenuDelegate
-    
-    func menuWillOpen(_ menu: NSMenu) {
+
+    func menuWillOpen(_: NSMenu) {
         // Refresh permission status every time the menu opens
         print("🔧 MenuBarManager: Menu opening, refreshing permissions...")
         forcePermissionRefresh()
-        
+
         // Also refresh the menu to ensure latest status is shown
         refreshMenu()
     }
-    
+
     private func refreshMenu() {
-        guard let statusItem = self.statusItem else { return }
+        guard let statusItem else { return }
         setupMenu(for: statusItem)
     }
-    
+
     private func startPermissionMonitoring() {
         // Check permissions every 1 second to detect changes faster
         permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.checkPermissionChanges()
         }
     }
-    
+
     private func checkPermissionChanges() {
         let currentStatus = AXIsProcessTrusted()
-        
+
         // Always log current status for debugging - every time
         print("🔍 Permission check: current=\(currentStatus), last=\(lastAccessibilityStatus)")
         print("🔍 App path: \(Bundle.main.bundlePath)")
         print("🔍 Bundle ID: \(Bundle.main.bundleIdentifier ?? "nil")")
-        
+
         if currentStatus != lastAccessibilityStatus {
             print("🔄 Accessibility permission status changed: \(lastAccessibilityStatus) -> \(currentStatus)")
             print("📋 Bundle ID: \(Bundle.main.bundleIdentifier ?? "nil")")
             print("📋 Bundle path: \(Bundle.main.bundlePath)")
             lastAccessibilityStatus = currentStatus
-            
+
             DispatchQueue.main.async {
                 self.updateStatusIcon()
                 self.refreshMenu()
             }
         }
     }
-    
+
     private func forcePermissionRefresh() {
         // Force update the permission status by simulating a change
         let currentStatus = AXIsProcessTrusted()
         let previousStatus = lastAccessibilityStatus
-        
+
         print("🔄 Force refreshing permission status...")
         print("   Current accessibility status: \(currentStatus)")
         print("   Last known status: \(previousStatus)")
         print("   App bundle path: \(Bundle.main.bundlePath)")
         print("   App bundle identifier: \(Bundle.main.bundleIdentifier ?? "nil")")
-        
+
         // Try enhanced permission check
         let enhancedOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
         let enhancedStatus = AXIsProcessTrustedWithOptions(enhancedOptions as CFDictionary)
         print("   Enhanced check (no prompt): \(enhancedStatus)")
-        
+
         // Update our internal state
         let statusChanged = currentStatus != previousStatus
         lastAccessibilityStatus = currentStatus
-        
+
         // Update the status icon
         updateStatusIcon()
-        
+
         // If status changed, refresh the menu
         if statusChanged {
             refreshMenu()
         }
-        
+
         // Also check screen recording for completeness
-        let screenRecordingStatus: Bool
-        if #available(macOS 10.15, *) {
-            screenRecordingStatus = CGPreflightScreenCaptureAccess()
+        let screenRecordingStatus: Bool = if #available(macOS 10.15, *) {
+            CGPreflightScreenCaptureAccess()
         } else {
-            screenRecordingStatus = true
+            true
         }
         print("   Current screen recording status: \(screenRecordingStatus)")
     }
-    
-    
+
     private func formatShortcutDisplay(_ modifiers: [ModifierKey], _ keyCode: Int) -> String {
-        let modifierString = modifiers.map { $0.displayName }.joined()
+        let modifierString = modifiers.map(\.displayName).joined()
         let keyName = keyCodeToString(keyCode)
         return "\(modifierString)\(keyName)"
     }
-    
+
     private func keyCodeToString(_ keyCode: Int) -> String {
         switch keyCode {
-        case 18: return "1"
-        case 19: return "2"
-        case 20: return "3"
-        case 21: return "4"
-        case 22: return "5"
-        case 23: return "6"
-        case 24: return "7"
-        case 25: return "8"
-        case 26: return "9"
-        case 29: return "0"
-        default: return "Key\(keyCode)"
+        case 18: "1"
+        case 19: "2"
+        case 20: "3"
+        case 21: "4"
+        case 22: "5"
+        case 23: "6"
+        case 24: "7"
+        case 25: "8"
+        case 26: "9"
+        case 29: "0"
+        default: "Key\(keyCode)"
         }
     }
-    
+
     @objc func handleMenuShortcut(_ sender: NSMenuItem) {
         guard let shortcut = sender.representedObject as? ShortcutConfiguration else { return }
-        
+
         Task {
             await textProcessor.processSelectedText(with: shortcut.prompt)
         }
     }
-    
-    @objc func showMasterShortcutMenu() {
-        // Trigger the master shortcut menu
-        shortcutManager.showMasterShortcutMenu()
+
+    @objc func showPrimaryShortcutMenu() {
+        // Trigger the primary shortcut menu
+        shortcutManager.showPrimaryShortcutMenu()
     }
-    
+
     @objc private func requestAccessibilityPermissions() {
         print("🔐 MenuBarManager: Permission request triggered from menu")
-        
+
         // Direct permission check and request
         let currentStatus = AXIsProcessTrusted()
         print("🔐 MenuBarManager: Current accessibility status: \(currentStatus)")
-        
+
         if !currentStatus {
             print("🔐 MenuBarManager: Requesting accessibility permissions...")
-            
+
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
             let newStatus = AXIsProcessTrustedWithOptions(options as CFDictionary)
             print("🔐 MenuBarManager: Permission request result: \(newStatus)")
-            
+
             // Immediately make an AX API call to force the system to register this specific app instance
             // This ensures the permission dialog registers the app from its current running location
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 let systemElement = AXUIElementCreateSystemWide()
                 var focused: CFTypeRef?
-                let result = AXUIElementCopyAttributeValue(systemElement, kAXFocusedUIElementAttribute as CFString, &focused)
+                let result = AXUIElementCopyAttributeValue(
+                    systemElement,
+                    kAXFocusedUIElementAttribute as CFString,
+                    &focused
+                )
                 print("🔐 MenuBarManager: AX API call to register app location - result: \(result)")
             }
-            
+
             // If we still don't have permission, open System Settings so the user can approve the newly-added entry
             if !newStatus {
-                print("🔐 MenuBarManager: Permission not yet granted – opening System Settings > Accessibility so the user can enable it")
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                print(
+                    "🔐 MenuBarManager: Permission not yet granted – opening System Settings > Accessibility so the user can enable it"
+                )
+                if let url =
+                    URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+                {
                     NSWorkspace.shared.open(url)
                 }
             }
         } else {
             print("🔐 MenuBarManager: Permissions already granted")
         }
-        
+
         // Update the menu after requesting permissions
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.forcePermissionRefresh()
             self.refreshMenu()
         }
     }
-    
+
     @objc private func requestScreenRecordingPermissions() {
         print("🔐 MenuBarManager: Screen recording permission request triggered from menu")
-        
+
         // Check current screen recording permission status
         let currentStatus = CGPreflightScreenCaptureAccess()
         print("🔐 MenuBarManager: Current screen recording status: \(currentStatus)")
-        
+
         if !currentStatus {
             print("🔐 MenuBarManager: Opening System Preferences for screen recording permission")
-            
+
             // Always open System Preferences directly for screen recording permissions
             // CGRequestScreenCaptureAccess() doesn't work reliably in unsigned apps
             if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
                 NSWorkspace.shared.open(url)
-                
+
                 // Show alert with instructions
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     let alert = NSAlert()
                     alert.messageText = "Screen Recording Permission Required"
                     alert.informativeText = """
                     To enable screenshot functionality:
-                    
+
                     1. In System Settings > Privacy & Security > Screen Recording
                     2. Click the '+' button
                     3. Navigate to and select TextEnhancer.app
                     4. Enable the checkbox next to TextEnhancer
                     5. Restart TextEnhancer
-                    
+
                     App location: \(Bundle.main.bundlePath)
                     """
                     alert.alertStyle = .informational
@@ -376,14 +399,14 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         } else {
             print("🔐 MenuBarManager: Screen recording permissions already granted")
         }
-        
+
         // Update the menu after requesting permissions
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.forcePermissionRefresh()
             self.refreshMenu()
         }
     }
-    
+
     @objc private func debugPermissionStatus() {
         let accessibilityStatus = AXIsProcessTrusted()
         let screenRecordingStatus = CGPreflightScreenCaptureAccess()
@@ -397,51 +420,55 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         print("   Process ID: \(ProcessInfo.processInfo.processIdentifier)")
         print("   Process name: \(ProcessInfo.processInfo.processName)")
         print("   Is running from Applications?: \(Bundle.main.bundlePath.hasPrefix("/Applications/"))")
-        
+
         // Check if we're the installed version
         let installedPath = "/Applications/TextEnhancer.app"
         let isInstalledVersion = Bundle.main.bundlePath == installedPath
         print("   Is installed version?: \(isInstalledVersion)")
-        
+
         if !isInstalledVersion {
             print("   ⚠️  WARNING: Not running from Applications folder!")
             print("   Expected: \(installedPath)")
             print("   Actual: \(Bundle.main.bundlePath)")
         }
-        
+
         // Test actual accessibility functionality
         testAccessibilityCapability()
-        
+
         // Force refresh the status
         lastAccessibilityStatus = !accessibilityStatus // Force change detection
         checkPermissionChanges()
     }
-    
+
     private func testAccessibilityCapability() {
         print("🧪 Testing actual accessibility capability...")
-        
+
         // Try to access system-wide accessibility
         let systemWideElement = AXUIElementCreateSystemWide()
         var focusedElement: CFTypeRef?
-        let result = AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
-        
+        let result = AXUIElementCopyAttributeValue(
+            systemWideElement,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedElement
+        )
+
         print("   AXUIElementCopyAttributeValue result: \(result.rawValue)")
         print("   Success means: \(result == .success)")
-        
+
         if result != .success {
             print("   ❌ Cannot access accessibility - this explains the permission issue")
         } else {
             print("   ✅ Can access accessibility - permissions should be working")
         }
     }
-    
+
     @objc private func forceRestartApp() {
         print("🔄 Force restarting TextEnhancer...")
-        
+
         // Get the app bundle path
         let appPath = Bundle.main.bundlePath
         print("   App path: \(appPath)")
-        
+
         // Verify this is the expected installation path to prevent old version launches
         let expectedPath = "/Users/\(NSUserName())/Applications/TextEnhancer.app"
         if !appPath.contains("/Applications/TextEnhancer.app") {
@@ -449,40 +476,40 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
             print("   Expected: \(expectedPath)")
             print("   This may cause restart issues. Consider reinstalling.")
         }
-        
+
         // Create a restart script that specifically targets the current running version
         let restartScript = """
         #!/bin/bash
         sleep 1
         open "\(appPath)"
         """
-        
+
         // Write script to temporary file
         let tempScript = "/tmp/restart_textenhancer.sh"
         do {
             try restartScript.write(toFile: tempScript, atomically: true, encoding: .utf8)
-            
+
             // Make it executable and run it
             let process = Process()
             process.launchPath = "/bin/chmod"
             process.arguments = ["+x", tempScript]
             process.launch()
             process.waitUntilExit()
-            
+
             // Launch the restart script
             let restartProcess = Process()
             restartProcess.launchPath = "/bin/bash"
             restartProcess.arguments = [tempScript]
             restartProcess.launch()
-            
+
             // Quit this instance
             NSApp.terminate(nil)
-            
+
         } catch {
             print("❌ Failed to create restart script: \(error)")
         }
     }
-    
+
     @objc private func openSettings() {
         SettingsWindowManager.shared.showSettings(configManager: configManager)
     }
@@ -493,24 +520,24 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         let url = Logger.shared.logFileURL
         NSWorkspace.shared.open(url)
     }
-    
+
     @objc private func manualRefreshStatus() {
         print("🔄 MenuBarManager: Manual refresh status triggered.")
         forcePermissionRefresh()
         refreshMenu()
     }
-    
+
     @objc private func configurationChanged() {
         print("🔄 MenuBarManager: Configuration changed, refreshing menu")
         DispatchQueue.main.async {
             self.refreshMenu()
         }
     }
-    
+
     @objc private func quitApp() {
         NSApp.terminate(nil)
     }
-    
+
     @objc private func processingStarted() {
         DispatchQueue.main.async {
             self.isProcessing = true
@@ -519,52 +546,54 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
             self.showNotification(title: "TextEnhancer", message: "Processing text...", isStarting: true)
         }
     }
-    
+
     @objc private func processingFinished() {
         DispatchQueue.main.async {
             self.isProcessing = false
-            self.isRetrying = false  // Reset retry state when processing finishes
+            self.isRetrying = false // Reset retry state when processing finishes
             self.retryInfo = nil
             self.stopProcessingAnimation()
             self.updateStatusIcon()
             self.showNotification(title: "TextEnhancer", message: "Text enhancement complete!", isStarting: false)
         }
     }
-    
+
     @objc private func retryingOperation(_ notification: Notification) {
         DispatchQueue.main.async {
             if let retryInfo = notification.userInfo?["retryInfo"] as? RetryNotificationInfo {
                 self.isRetrying = true
                 self.retryInfo = retryInfo
                 self.updateStatusIcon()
-                print("🔄 MenuBarManager: Retrying \(retryInfo.provider) operation (attempt \(retryInfo.attempt) of \(retryInfo.maxAttempts))")
+                print(
+                    "🔄 MenuBarManager: Retrying \(retryInfo.provider) operation (attempt \(retryInfo.attempt) of \(retryInfo.maxAttempts))"
+                )
             }
         }
     }
-    
+
     private func startProcessingAnimation() {
         // Stop any existing animation
         animationTimer?.invalidate()
         animationPhase = 0
-        
+
         // Start new animation timer
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.animateProcessingIcon()
         }
     }
-    
+
     private func stopProcessingAnimation() {
         animationTimer?.invalidate()
         animationTimer = nil
         animationPhase = 0
     }
-    
+
     private func animateProcessingIcon() {
-        guard let statusItem = self.statusItem,
+        guard let statusItem,
               let button = statusItem.button else { return }
-        
+
         animationPhase = (animationPhase + 1) % 4
-        
+
         if isRetrying {
             // Retry animation - rotating arrows
             let retryIcons = ["🔄", "🔁", "🔄", "🔁"]
@@ -572,11 +601,14 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
                 "arrow.triangle.2.circlepath",
                 "arrow.clockwise",
                 "arrow.triangle.2.circlepath",
-                "arrow.counterclockwise"
+                "arrow.counterclockwise",
             ]
-            
+
             // Try to use SF Symbols first
-            if let image = NSImage(systemSymbolName: retrySymbols[animationPhase], accessibilityDescription: "Retrying...") {
+            if let image = NSImage(
+                systemSymbolName: retrySymbols[animationPhase],
+                accessibilityDescription: "Retrying..."
+            ) {
                 button.image = image
                 button.image?.size = NSSize(width: 16, height: 16)
                 button.image?.isTemplate = true
@@ -593,11 +625,14 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
                 "wand.and.stars.inverse",
                 "sparkles",
                 "wand.and.rays.inverse",
-                "sparkles"
+                "sparkles",
             ]
-            
+
             // Try to use SF Symbols first
-            if let image = NSImage(systemSymbolName: animationSymbols[animationPhase], accessibilityDescription: "Processing...") {
+            if let image = NSImage(
+                systemSymbolName: animationSymbols[animationPhase],
+                accessibilityDescription: "Processing..."
+            ) {
                 button.image = image
                 button.image?.size = NSSize(width: 16, height: 16)
                 button.image?.isTemplate = true
@@ -609,24 +644,27 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
             }
         }
     }
-    
+
     func updateStatusIcon() {
-        guard let statusItem = self.statusItem,
+        guard let statusItem,
               let button = statusItem.button else { return }
-        
+
         // Clear any existing content
         button.image = nil
         button.title = ""
-        
+
         let accessibilityEnabled = AXIsProcessTrusted()
-        
+
         // Set tooltip based on current state
         updateTooltip()
-        
+
         // Use appropriate SF Symbols with fallbacks
         if isRetrying {
             // Show retry-specific icon
-            if let image = NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: "Retrying...") {
+            if let image = NSImage(
+                systemSymbolName: "arrow.triangle.2.circlepath",
+                accessibilityDescription: "Retrying..."
+            ) {
                 button.image = image
                 button.image?.size = NSSize(width: 16, height: 16)
                 button.image?.isTemplate = true
@@ -635,7 +673,10 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
             }
         } else if isProcessing {
             // This will be overridden by animation, but set initial state
-            if let image = NSImage(systemSymbolName: "wand.and.stars.inverse", accessibilityDescription: "Processing...") {
+            if let image = NSImage(
+                systemSymbolName: "wand.and.stars.inverse",
+                accessibilityDescription: "Processing..."
+            ) {
                 button.image = image
                 button.image?.size = NSSize(width: 16, height: 16)
                 button.image?.isTemplate = true
@@ -645,10 +686,13 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         } else if !accessibilityEnabled {
             // Show different warning icons based on whether we're running in bundle or not
             let isBundle = !Bundle.main.bundlePath.contains("/.build/")
-            
+
             if isBundle {
                 // Production (bundled): Use triangle with exclamation mark
-                if let image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: "Accessibility permissions required") {
+                if let image = NSImage(
+                    systemSymbolName: "exclamationmark.triangle",
+                    accessibilityDescription: "Accessibility permissions required"
+                ) {
                     button.image = image
                     button.image?.size = NSSize(width: 16, height: 16)
                     button.image?.isTemplate = true
@@ -657,7 +701,10 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
                 }
             } else {
                 // Development (non-bundled): Use wrench to indicate development mode
-                if let image = NSImage(systemSymbolName: "wrench", accessibilityDescription: "Development mode - permissions required") {
+                if let image = NSImage(
+                    systemSymbolName: "wrench",
+                    accessibilityDescription: "Development mode - permissions required"
+                ) {
                     button.image = image
                     button.image?.size = NSSize(width: 16, height: 16)
                     button.image?.isTemplate = true
@@ -674,15 +721,15 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
                 button.title = "✨"
             }
         }
-        
+
         button.appearsDisabled = false
     }
-    
+
     private func updateTooltip() {
-        guard let statusItem = self.statusItem,
+        guard let statusItem,
               let button = statusItem.button else { return }
-        
-        if isRetrying, let retryInfo = self.retryInfo {
+
+        if isRetrying, let retryInfo {
             button.toolTip = "Connection issue - retrying \(retryInfo.provider)... (\(retryInfo.attempt)/\(retryInfo.maxAttempts))"
         } else if isProcessing {
             button.toolTip = "Processing text... (click to cancel)"
@@ -695,17 +742,18 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
             }
         }
     }
-    
+
     private func requestNotificationPermissions() {
         // Check if we're running in a proper app bundle and not from swift run
         guard Bundle.main.bundleIdentifier != nil,
-              !Bundle.main.bundlePath.contains("/.build/") else {
+              !Bundle.main.bundlePath.contains("/.build/")
+        else {
             print("ℹ️  Skipping notification permissions request - not running in app bundle")
             return
         }
-        
+
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if let error = error {
+            if let error {
                 print("⚠️  Notification permission error: \(error)")
             } else if granted {
                 print("✅ Notification permissions granted")
@@ -714,45 +762,46 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
             }
         }
     }
-    
+
     private func showNotification(title: String, message: String, isStarting: Bool) {
         guard configManager.configuration.enableNotifications else { return }
-        
+
         // Check if we're running in a proper app bundle and not from swift run
         guard Bundle.main.bundleIdentifier != nil,
-              !Bundle.main.bundlePath.contains("/.build/") else {
+              !Bundle.main.bundlePath.contains("/.build/")
+        else {
             print("ℹ️  Skipping notification - not running in app bundle")
             return
         }
-        
+
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = message
         content.sound = UNNotificationSound.default
-        
+
         // Different icons for different states
         if isStarting {
             content.badge = 1
         } else {
             content.badge = 0
         }
-        
+
         let identifier = isStarting ? "text-processing-started" : "text-processing-finished"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
-        
+
         UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
+            if let error {
                 print("⚠️  Failed to show notification: \(error)")
             }
         }
     }
-    
+
     deinit {
         animationTimer?.invalidate()
         permissionCheckTimer?.invalidate()
         NotificationCenter.default.removeObserver(self)
     }
-    
+
     /// Opens System Settings directly to the Accessibility pane so the user can tick the checkbox for TextEnhancer.
     private func openAccessibilityPreferences() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
@@ -765,4 +814,4 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
 extension Notification.Name {
     static let textProcessingStarted = Notification.Name("textProcessingStarted")
     static let textProcessingFinished = Notification.Name("textProcessingFinished")
-} 
+}

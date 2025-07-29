@@ -8,12 +8,16 @@ class ClaudeService: ObservableObject {
     private let modelsURL = "https://api.anthropic.com/v1/models"
     private let maxTokens = 1000
     private let timeout: TimeInterval = 30.0
-    
-    init(configManager: ConfigurationManager, urlSession: URLSessionProtocol? = nil, cacheManager: ModelCacheManager = ModelCacheManager()) {
+
+    init(
+        configManager: ConfigurationManager,
+        urlSession: URLSessionProtocol? = nil,
+        cacheManager: ModelCacheManager = ModelCacheManager()
+    ) {
         self.configManager = configManager
         self.cacheManager = cacheManager
-        
-        if let urlSession = urlSession {
+
+        if let urlSession {
             self.urlSession = urlSession
         } else {
             // Create a custom URL session with timeout configuration
@@ -21,45 +25,52 @@ class ClaudeService: ObservableObject {
             configuration.timeoutIntervalForRequest = 30.0
             configuration.timeoutIntervalForResource = 60.0
             configuration.waitsForConnectivity = false
-            
+
             self.urlSession = URLSession(configuration: configuration)
         }
     }
-    
+
     func enhanceText(_ text: String, with prompt: String, using model: String) async throws -> String {
-        return try await enhanceTextWithRetry(text, with: prompt, using: model, screenContext: nil)
+        try await enhanceTextWithRetry(text, with: prompt, using: model, screenContext: nil)
     }
-    
-    func enhanceText(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
-        return try await enhanceTextWithRetry(text, with: prompt, using: model, screenContext: screenContext)
+
+    func enhanceText(_ text: String, with prompt: String, using model: String,
+                     screenContext: String?) async throws -> String
+    {
+        try await enhanceTextWithRetry(text, with: prompt, using: model, screenContext: screenContext)
     }
-    
+
     // MARK: - Retry Logic
-    
-    private func enhanceTextWithRetry(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
+
+    private func enhanceTextWithRetry(
+        _ text: String,
+        with prompt: String,
+        using model: String,
+        screenContext: String?
+    ) async throws -> String {
         let retryController = RetryController()
         var lastError: Error?
-        
+
         while retryController.hasAttemptsRemaining {
             let attempt = retryController.incrementAttempt()
-            
+
             do {
                 return try await performEnhanceText(text, with: prompt, using: model, screenContext: screenContext)
             } catch {
                 lastError = error
-                
+
                 // Check if this error should be retried
                 if !retryController.shouldRetry(error: error) {
                     print("❌ ClaudeService: Non-retryable error on attempt \(attempt): \(error)")
                     throw error
                 }
-                
+
                 // Check if we have more attempts
                 if !retryController.hasAttemptsRemaining {
                     print("❌ ClaudeService: Final attempt (\(attempt)) failed: \(error)")
                     break
                 }
-                
+
                 // Post retry notification
                 let retryInfo = RetryNotificationInfo(
                     attempt: attempt + 1, // Next attempt number
@@ -71,9 +82,11 @@ class ClaudeService: ObservableObject {
                     object: nil,
                     userInfo: ["retryInfo": retryInfo]
                 )
-                
-                print("⚠️ ClaudeService: Attempt \(attempt) failed, retrying in \(retryController.delay(forAttempt: attempt))s: \(error)")
-                
+
+                print(
+                    "⚠️ ClaudeService: Attempt \(attempt) failed, retrying in \(retryController.delay(forAttempt: attempt))s: \(error)"
+                )
+
                 // Wait before retrying
                 let delay = retryController.delay(forAttempt: attempt)
                 if delay > 0 {
@@ -81,31 +94,42 @@ class ClaudeService: ObservableObject {
                 }
             }
         }
-        
+
         // If we get here, all attempts failed
         throw lastError ?? ClaudeError.invalidResponse
     }
-    
-    private func performEnhanceText(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
+
+    private func performEnhanceText(
+        _ text: String,
+        with prompt: String,
+        using model: String,
+        screenContext: String?
+    ) async throws -> String {
         print("🔧 ClaudeService: Enhancing text (\(text.count) characters)")
         if screenContext != nil {
             print("🔧 ClaudeService: Including screen context")
         }
-        
+
         guard let apiKey = configManager.claudeApiKey, !apiKey.isEmpty else {
             print("❌ ClaudeService: API key missing or empty")
             throw ClaudeError.missingApiKey
         }
-        
-        let request = try createRequest(text: text, prompt: prompt, apiKey: apiKey, model: model, screenContext: screenContext)
-        
+
+        let request = try createRequest(
+            text: text,
+            prompt: prompt,
+            apiKey: apiKey,
+            model: model,
+            screenContext: screenContext
+        )
+
         let (data, response) = try await urlSession.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             print("❌ ClaudeService: Invalid response type")
             throw ClaudeError.invalidResponse
         }
-        
+
         guard httpResponse.statusCode == 200 else {
             print("❌ ClaudeService: API error (status: \(httpResponse.statusCode))")
             if let errorString = String(data: data, encoding: .utf8) {
@@ -113,17 +137,17 @@ class ClaudeService: ObservableObject {
             }
             throw ClaudeError.apiError(httpResponse.statusCode, data)
         }
-        
+
         let responseData = try JSONDecoder().decode(ClaudeResponse.self, from: data)
-        
+
         guard let content = responseData.content.first?.text else {
             print("❌ ClaudeService: No content in response")
             throw ClaudeError.noContent
         }
-        
+
         // Check if this is a screenshot-only request
         let isScreenshotOnly = text == "[Screenshot analysis requested]"
-        
+
         if isScreenshotOnly {
             // For screenshot analysis, return the content directly
             print("✅ ClaudeService: Screenshot analysis completed successfully")
@@ -140,12 +164,14 @@ class ClaudeService: ObservableObject {
             }
         }
     }
-    
-    internal func createRequest(text: String, prompt: String, apiKey: String, model: String, screenContext: String? = nil) throws -> URLRequest {
+
+    func createRequest(text: String, prompt: String, apiKey: String, model: String,
+                       screenContext: String? = nil) throws -> URLRequest
+    {
         guard let url = URL(string: apiURL) else {
             throw ClaudeError.invalidURL
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -153,10 +179,10 @@ class ClaudeService: ObservableObject {
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         request.timeoutInterval = 30.0
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        
+
         let basePrompt: String
         let isScreenshotOnly = text == "[Screenshot analysis requested]"
-        
+
         if isScreenshotOnly {
             // Screenshot-only mode - use prompt as-is
             basePrompt = prompt
@@ -164,12 +190,12 @@ class ClaudeService: ObservableObject {
             // Normal text enhancement mode
             basePrompt = """
             \(prompt)
-            
+
             Text to enhance:
             \(text)
             """
         }
-        
+
         let textPrompt: String
         if isScreenshotOnly {
             // For screenshot analysis, don't require JSON format
@@ -177,32 +203,35 @@ class ClaudeService: ObservableObject {
         } else {
             // For text enhancement, require JSON format
             let jsonInstructions = """
-            
+
             CRITICAL: You must respond with ONLY a valid JSON object. No explanations, no markdown, no code blocks, no additional text.
-            
+
             Required JSON format:
             {"enhancedText": "your enhanced text here"}
-            
+
             Do not include any text before or after the JSON object.
             """
             textPrompt = basePrompt + jsonInstructions
         }
-        
-        if let screenContext = screenContext {
+
+        if let screenContext {
             // Create multimodal message with screen context
             let messageContent = [
-                ClaudeMessageContent(type: "image", source: ClaudeImageSource(type: "base64", media_type: "image/jpeg", data: screenContext)),
-                ClaudeMessageContent(type: "text", text: textPrompt)
+                ClaudeMessageContent(
+                    type: "image",
+                    source: ClaudeImageSource(type: "base64", media_type: "image/jpeg", data: screenContext)
+                ),
+                ClaudeMessageContent(type: "text", text: textPrompt),
             ]
-            
+
             let requestBody = ClaudeRequestMultimodal(
                 model: model,
                 max_tokens: maxTokens,
                 messages: [
-                    ClaudeMessageMultimodal(role: "user", content: messageContent)
+                    ClaudeMessageMultimodal(role: "user", content: messageContent),
                 ]
             )
-            
+
             request.httpBody = try JSONEncoder().encode(requestBody)
         } else {
             // Use the simple text-only format for backward compatibility
@@ -210,36 +239,36 @@ class ClaudeService: ObservableObject {
                 model: model,
                 max_tokens: maxTokens,
                 messages: [
-                    ClaudeMessage(role: "user", content: textPrompt)
+                    ClaudeMessage(role: "user", content: textPrompt),
                 ]
             )
-            
+
             request.httpBody = try JSONEncoder().encode(requestBody)
         }
-        
+
         return request
     }
-    
+
     func fetchAvailableModels() async throws -> [ClaudeModel] {
         print("🔧 ClaudeService: Fetching available models...")
-        
+
         // Check cache first
         if let cachedModels = cacheManager.getCachedClaudeModels() {
             print("✅ ClaudeService: Using cached models (\(cachedModels.count) models)")
             return cachedModels
         }
-        
+
         print("🔧 ClaudeService: Cache miss or expired, fetching from API...")
-        
+
         guard let apiKey = configManager.claudeApiKey, !apiKey.isEmpty else {
             print("❌ ClaudeService: API key missing for model fetching")
             throw ClaudeError.missingApiKey
         }
-        
+
         guard let url = URL(string: modelsURL) else {
             throw ClaudeError.invalidURL
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -247,14 +276,14 @@ class ClaudeService: ObservableObject {
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         request.timeoutInterval = 30.0
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        
+
         let (data, response) = try await urlSession.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             print("❌ ClaudeService: Invalid response type for models")
             throw ClaudeError.invalidResponse
         }
-        
+
         guard httpResponse.statusCode == 200 else {
             print("❌ ClaudeService: Models API error (status: \(httpResponse.statusCode))")
             if let errorString = String(data: data, encoding: .utf8) {
@@ -262,9 +291,9 @@ class ClaudeService: ObservableObject {
             }
             throw ClaudeError.apiError(httpResponse.statusCode, data)
         }
-        
+
         let modelsResponse = try JSONDecoder().decode(ClaudeModelsResponse.self, from: data)
-        
+
         // Filter models to only include those from the last year
         let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
         let filteredModels = modelsResponse.data.filter { model in
@@ -274,12 +303,14 @@ class ClaudeService: ObservableObject {
             }
             return true // Include models with unparseable dates to be safe
         }
-        
-        print("✅ ClaudeService: Fetched \(modelsResponse.data.count) models, filtered to \(filteredModels.count) recent models")
-        
+
+        print(
+            "✅ ClaudeService: Fetched \(modelsResponse.data.count) models, filtered to \(filteredModels.count) recent models"
+        )
+
         // Cache the filtered models
         cacheManager.cacheClaudeModels(filteredModels)
-        
+
         return filteredModels
     }
 }
@@ -314,16 +345,16 @@ struct ClaudeMessageContent: Codable {
     let type: String
     let text: String?
     let source: ClaudeImageSource?
-    
+
     init(type: String, text: String) {
         self.type = type
         self.text = text
-        self.source = nil
+        source = nil
     }
-    
+
     init(type: String, source: ClaudeImageSource) {
         self.type = type
-        self.text = nil
+        text = nil
         self.source = source
     }
 }
@@ -364,9 +395,9 @@ struct ClaudeModel: Codable, Identifiable {
     let display_name: String
     let type: String
     let created_at: String
-    
+
     var displayName: String {
-        return display_name
+        display_name
     }
 }
 
@@ -379,13 +410,13 @@ enum ClaudeError: LocalizedError {
     case apiError(Int, Data)
     case noContent
     case invalidJSONResponse(Error)
-    
+
     var errorDescription: String? {
         switch self {
         case .missingApiKey:
             return """
             🔑 Claude API key missing or invalid
-            
+
             Fix: Open Settings → Enter your Claude API key
             Get a key at: console.anthropic.com
             """
@@ -393,27 +424,27 @@ enum ClaudeError: LocalizedError {
             return "⚠️ Invalid API URL configuration"
         case .invalidResponse:
             return "⚠️ Invalid response from Claude API"
-        case .apiError(let statusCode, let data):
+        case let .apiError(statusCode, data):
             if statusCode == 401 {
                 return """
                 🔑 Claude API key invalid
-                
+
                 Your API key appears to be incorrect or expired.
-                
+
                 Fix: Check your API key at console.anthropic.com
                 Then update it in Settings below
                 """
             } else if statusCode == 429 {
                 return """
                 ⏱️ Rate limit exceeded
-                
+
                 Too many requests to Claude API.
                 Wait a moment and try again.
                 """
             } else if statusCode >= 500 {
                 return """
                 🌐 Claude API temporarily unavailable
-                
+
                 Server error (HTTP \(statusCode)).
                 This usually resolves quickly.
                 """
@@ -425,32 +456,32 @@ enum ClaudeError: LocalizedError {
             }
         case .noContent:
             return "⚠️ No response content received from Claude API"
-        case .invalidJSONResponse(let error):
+        case let .invalidJSONResponse(error):
             return "⚠️ Invalid response format from Claude: \(error.localizedDescription)"
         }
     }
-    
+
     // Helper to determine what actions should be available
     var needsSettingsAction: Bool {
         switch self {
         case .missingApiKey, .apiError(401, _):
-            return true
+            true
         default:
-            return false
+            false
         }
     }
-    
+
     var isNetworkRetryable: Bool {
         switch self {
-        case .apiError(let statusCode, _):
-            return statusCode >= 500 || statusCode == 429
+        case let .apiError(statusCode, _):
+            statusCode >= 500 || statusCode == 429
         case .invalidResponse:
-            return true
+            true
         default:
-            return false
+            false
         }
     }
-    
+
     var technicalDetails: String {
         switch self {
         case .missingApiKey:
@@ -459,13 +490,13 @@ enum ClaudeError: LocalizedError {
             return "ClaudeError.invalidURL"
         case .invalidResponse:
             return "ClaudeError.invalidResponse"
-        case .apiError(let statusCode, let data):
+        case let .apiError(statusCode, data):
             let dataString = String(data: data, encoding: .utf8) ?? "No data"
             return "ClaudeError.apiError(\(statusCode), \(dataString))"
         case .noContent:
             return "ClaudeError.noContent"
-        case .invalidJSONResponse(let error):
+        case let .invalidJSONResponse(error):
             return "ClaudeError.invalidJSONResponse(\(error))"
         }
     }
-} 
+}
