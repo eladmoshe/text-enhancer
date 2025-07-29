@@ -114,7 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !accessEnabled {
             print("🔐 Prompting for accessibility permissions...")
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-            let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+            _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
             print("🔐 Permission dialog should have appeared - please grant permissions and try again")
         } else {
             print("✅ Accessibility permissions already granted")

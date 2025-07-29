@@ -143,7 +143,7 @@ class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
         }
 
         // Original implementation
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             guard let self = self, let window = self.menuWindow else { return }
             
             // Get click location in screen coordinates

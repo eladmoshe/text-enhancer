@@ -78,6 +78,110 @@ class MockAlertPresenter: AlertPresenter {
     }
 }
 
+class MockClaudeService: ClaudeService {
+    var mockResponse: String = ""
+    var errorToThrow: Error?
+    var enhanceTextCallCount = 0
+    
+    override func enhanceText(_ text: String, with prompt: String, using model: String) async throws -> String {
+        enhanceTextCallCount += 1
+        
+        if let error = errorToThrow {
+            throw error
+        }
+        
+        return mockResponse
+    }
+    
+    override func enhanceText(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
+        enhanceTextCallCount += 1
+        
+        if let error = errorToThrow {
+            throw error
+        }
+        
+        return mockResponse
+    }
+}
+
+class MockOpenAIService: OpenAIService {
+    var mockResponse: String = ""
+    var errorToThrow: Error?
+    var enhanceTextCallCount = 0
+    
+    override func enhanceText(_ text: String, with prompt: String, using model: String) async throws -> String {
+        enhanceTextCallCount += 1
+        
+        if let error = errorToThrow {
+            throw error
+        }
+        
+        return mockResponse
+    }
+    
+    override func enhanceText(_ text: String, with prompt: String, using model: String, screenContext: String?) async throws -> String {
+        enhanceTextCallCount += 1
+        
+        if let error = errorToThrow {
+            throw error
+        }
+        
+        return mockResponse
+    }
+}
+
+class MockScreenCaptureService: ScreenCaptureService {
+    var mockScreenshot: NSImage?
+    var captureActiveScreenCallCount = 0
+    
+    override func captureActiveScreen() -> NSImage? {
+        captureActiveScreenCallCount += 1
+        return mockScreenshot
+    }
+}
+
+// MARK: - Helper Functions
+
+func createConfigManager(with tempDir: TemporaryDirectory) -> ConfigurationManager {
+    let config = AppConfiguration(
+        shortcuts: [],
+        maxTokens: 1000,
+        timeout: 30.0,
+        showStatusIcon: true,
+        enableNotifications: true,
+        autoSave: true,
+        logLevel: "info",
+        apiProviders: APIProviders(
+            claude: APIProviderConfig(apiKey: "test-api-key", model: "claude-sonnet-4-20250514", enabled: true),
+            openai: APIProviderConfig(apiKey: "test-openai-key", model: "gpt-4o", enabled: true)
+        )
+    )
+    
+    let configData = try! JSONEncoder().encode(config)
+    try! tempDir.createAppSupportDirectory()
+    try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
+    
+    return ConfigurationManager(
+        appSupportDir: tempDir.appSupportDirectory()
+    )
+}
+
+func createMockClaudeService(withResponse response: String = "Mock response") -> MockClaudeService {
+    let tempDir = try! TemporaryDirectory()
+    let configManager = createConfigManager(with: tempDir)
+    let mockService = MockClaudeService(configManager: configManager)
+    mockService.mockResponse = response
+    return mockService
+}
+
+func createMockOpenAIService(withResponse response: String = "Mock response") -> MockOpenAIService {
+    let tempDir = try! TemporaryDirectory()
+    let configManager = createConfigManager(with: tempDir)
+    let mockService = MockOpenAIService(configManager: configManager)
+    mockService.mockResponse = response
+    return mockService
+}
+
 // MARK: - Test Suite
 
 final class TextProcessorTests: XCTestCase {
@@ -414,18 +518,10 @@ final class TextProcessorTests: XCTestCase {
         let mockSelectionProvider = MockTextSelectionProvider()
         mockSelectionProvider.mockSelectedText = "original text"
         
-        let processor = TextProcessor(
-            configManager: configManager,
-            claudeService: mockClaudeService,
-            openAIService: createMockOpenAIService(),
-            textSelectionProvider: mockSelectionProvider,
-            textReplacer: MockTextReplacer(),
-            accessibilityChecker: MockAccessibilityChecker(),
-            screenCaptureService: MockScreenCaptureService()
-        )
+        let processor = TextProcessor(configManager: configManager)
         
         // When: Process text with shortcut
-        await processor.processText(for: testShortcut)
+        await processor.processSelectedText(with: testShortcut.prompt, shortcut: testShortcut)
         
         // Then: Should log shortcut invocation details
         // We'll need to capture log output to verify this
@@ -450,20 +546,21 @@ final class TextProcessorTests: XCTestCase {
         
         let mockClaudeService = createMockClaudeService(withResponse: "Screenshot analysis result")
         let mockScreenCapture = MockScreenCaptureService()
-        mockScreenCapture.mockScreenshotData = "mock_screenshot_data".data(using: .utf8)!
+        mockScreenCapture.mockScreenshot = NSImage()
+        let mockSelectionProvider = MockTextSelectionProvider()
+        mockSelectionProvider.mockSelectedText = "original text"
         
         let processor = TextProcessor(
             configManager: configManager,
-            claudeService: mockClaudeService,
-            openAIService: createMockOpenAIService(),
-            textSelectionProvider: MockTextSelectionProvider(),
+            textSelectionProvider: mockSelectionProvider,
             textReplacer: MockTextReplacer(),
             accessibilityChecker: MockAccessibilityChecker(),
+            alertPresenter: MockAlertPresenter(),
             screenCaptureService: mockScreenCapture
         )
         
         // When: Process screenshot request
-        await processor.processText(for: screenshotShortcut)
+        await processor.processSelectedText(with: screenshotShortcut.prompt, shortcut: screenshotShortcut)
         
         // Then: Should log context classification (screenshot vs text)
         XCTAssertTrue(true, "This test will be updated once context logging is in place")
@@ -492,16 +589,15 @@ final class TextProcessorTests: XCTestCase {
         
         let processor = TextProcessor(
             configManager: configManager,
-            claudeService: mockClaudeService,
-            openAIService: createMockOpenAIService(),
             textSelectionProvider: mockSelectionProvider,
             textReplacer: MockTextReplacer(),
             accessibilityChecker: MockAccessibilityChecker(),
+            alertPresenter: MockAlertPresenter(),
             screenCaptureService: MockScreenCaptureService()
         )
         
         // When: Process text that will fail
-        await processor.processText(for: testShortcut)
+        await processor.processSelectedText(with: testShortcut.prompt, shortcut: testShortcut)
         
         // Then: Should log error with context about shortcut and configuration
         XCTAssertTrue(true, "This test will be updated once error context logging is in place")
@@ -529,16 +625,15 @@ final class TextProcessorTests: XCTestCase {
         
         let processor = TextProcessor(
             configManager: configManager,
-            claudeService: mockClaudeService,
-            openAIService: createMockOpenAIService(),
             textSelectionProvider: mockSelectionProvider,
             textReplacer: MockTextReplacer(),
             accessibilityChecker: MockAccessibilityChecker(),
+            alertPresenter: MockAlertPresenter(),
             screenCaptureService: MockScreenCaptureService()
         )
         
         // When: Process text
-        await processor.processText(for: testShortcut)
+        await processor.processSelectedText(with: testShortcut.prompt, shortcut: testShortcut)
         
         // Then: Should log timing information for debugging performance issues
         XCTAssertTrue(true, "This test will be updated once performance logging is in place")
@@ -547,8 +642,9 @@ final class TextProcessorTests: XCTestCase {
     // MARK: - Helper Methods for Debug Logging Tests
     
     private func createFailingMockClaudeService() -> MockClaudeService {
-        let mockService = MockClaudeService()
-        mockService.shouldThrowError = true
+        let tempDir = try! TemporaryDirectory()
+        let configManager = createConfigManager(with: tempDir)
+        let mockService = MockClaudeService(configManager: configManager)
         mockService.errorToThrow = ClaudeError.invalidJSONResponseWithContext(
             "Mock error for testing",
             "Use correct shortcut mapping"

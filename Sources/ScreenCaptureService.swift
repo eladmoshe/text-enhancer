@@ -104,7 +104,7 @@ class ScreenCaptureService {
             print("❌ ScreenCaptureService: Failed to get display ID from screen device description")
             return nil
         }
-        let _ = CGDirectDisplayID(number.uint32Value) // Display ID not used since CGDisplayCreateImage is deprecated
+        _ = CGDirectDisplayID(number.uint32Value) // Display ID not used since CGDisplayCreateImage is deprecated
         
         // Note: CGDisplayCreateImage is deprecated and will not work on macOS 15.0+
         // This code is only for reference and older macOS versions

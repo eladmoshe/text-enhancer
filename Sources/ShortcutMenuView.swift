@@ -7,7 +7,7 @@ struct ShortcutMenuView: View {
     let onDismiss: () -> Void
     
     @State private var selectedIndex: Int = 0
-    @State private var hoveredIndex: Int? = nil
+    @State private var hoveredIndex: Int?
     
     var body: some View {
         VStack(spacing: 0) {

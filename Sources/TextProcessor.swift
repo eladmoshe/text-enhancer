@@ -536,7 +536,7 @@ class TextProcessor: ObservableObject {
                 }
                 
                 // Capture screenshot if enabled for this shortcut
-                var screenContext: String? = nil
+                var screenContext: String?
                 if let shortcut = configManager.configuration.shortcuts.first(where: { $0.prompt == prompt }),
                    shortcut.effectiveIncludeScreenshot {
                     

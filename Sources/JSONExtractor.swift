@@ -107,10 +107,8 @@ class JSONExtractor {
         let possibleJSONs = findAllJSONObjects(in: response)
         
         // Try each potential JSON object until we find one that works
-        for jsonCandidate in possibleJSONs {
-            if isValidJSON(jsonCandidate) {
-                return jsonCandidate
-            }
+        for jsonCandidate in possibleJSONs where isValidJSON(jsonCandidate) {
+            return jsonCandidate
         }
         
         // Fall back to original simple extraction
