@@ -144,7 +144,6 @@ struct AppConfiguration: Codable {
     let maxTokens: Int
     let timeout: TimeInterval
     let showStatusIcon: Bool
-    let enableNotifications: Bool
     let autoSave: Bool
     let logLevel: String
     let apiProviders: APIProviders
@@ -165,7 +164,6 @@ struct AppConfiguration: Codable {
         maxTokens: 1000,
         timeout: 30.0,
         showStatusIcon: true,
-        enableNotifications: true,
         autoSave: true,
         logLevel: "info",
         apiProviders: APIProviders.default

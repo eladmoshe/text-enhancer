@@ -51,7 +51,6 @@ struct SettingsView: View {
     @State private var maxTokens: Int
     @State private var timeout: Double
     @State private var showStatusIcon: Bool
-    @State private var enableNotifications: Bool
     @State private var claudeApiKey: String
     @State private var openaiApiKey: String
     @State private var claudeEnabled: Bool
@@ -73,7 +72,6 @@ struct SettingsView: View {
         self._maxTokens = State(initialValue: config.maxTokens)
         self._timeout = State(initialValue: config.timeout)
         self._showStatusIcon = State(initialValue: config.showStatusIcon)
-        self._enableNotifications = State(initialValue: config.enableNotifications)
         self._claudeApiKey = State(initialValue: config.apiProviders.claude.apiKey)
         self._openaiApiKey = State(initialValue: config.apiProviders.openai.apiKey)
         self._claudeEnabled = State(initialValue: config.apiProviders.claude.enabled)
@@ -302,9 +300,6 @@ struct SettingsView: View {
                             Toggle("Show Status Icon", isOn: $showStatusIcon)
                                 .font(.subheadline)
                                 .onChange(of: showStatusIcon) { saveConfiguration() }
-                            Toggle("Enable Notifications", isOn: $enableNotifications)
-                                .font(.subheadline)
-                                .onChange(of: enableNotifications) { saveConfiguration() }
                         }
                         .padding(.vertical, 4)
                     }
@@ -351,7 +346,6 @@ struct SettingsView: View {
             maxTokens: maxTokens,
             timeout: timeout,
             showStatusIcon: showStatusIcon,
-            enableNotifications: enableNotifications,
             autoSave: configManager.configuration.autoSave,
             logLevel: configManager.configuration.logLevel,
             apiProviders: APIProviders(

@@ -1,7 +1,6 @@
 {
   "showStatusIcon": true,
   "timeout": 30,
-  "enableNotifications": true,
   "apiProviders": {
     "claude": {
       "model": "claude-3-5-sonnet-20241022",

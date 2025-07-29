@@ -174,7 +174,6 @@ main.swift
   ],
   "ui": {
     "showProcessingIndicator": true,
-    "enableNotifications": true,
     "animateMenuBarIcon": true
   }
 }

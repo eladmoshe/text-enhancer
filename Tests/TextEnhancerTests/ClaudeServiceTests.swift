@@ -34,7 +34,6 @@ final class ClaudeServiceTests: XCTestCase {
             maxTokens: 1000,
             timeout: 30.0,
             showStatusIcon: true,
-            enableNotifications: true,
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders(
@@ -287,7 +286,6 @@ final class ClaudeServiceTests: XCTestCase {
             maxTokens: currentConfig.maxTokens,
             timeout: currentConfig.timeout,
             showStatusIcon: currentConfig.showStatusIcon,
-            enableNotifications: currentConfig.enableNotifications,
             autoSave: currentConfig.autoSave,
             logLevel: currentConfig.logLevel,
             apiProviders: modifiedApiProviders

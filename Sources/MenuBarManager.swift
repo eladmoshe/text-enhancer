@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import UserNotifications
 
 class MenuBarManager: ObservableObject {
     private let shortcutManager: ShortcutManager
@@ -43,10 +42,6 @@ class MenuBarManager: ObservableObject {
             object: nil
         )
         
-        // Request notification permissions if enabled
-        if configManager.configuration.enableNotifications {
-            requestNotificationPermissions()
-        }
         
         // Set initial accessibility status and log it
         lastAccessibilityStatus = AXIsProcessTrusted()
@@ -457,7 +452,6 @@ class MenuBarManager: ObservableObject {
             self.isProcessing = true
             self.updateStatusIcon()
             self.startProcessingAnimation()
-            self.showNotification(title: "TextEnhancer", message: "Processing text...", isStarting: true)
         }
     }
     
@@ -468,7 +462,6 @@ class MenuBarManager: ObservableObject {
             self.retryInfo = nil
             self.stopProcessingAnimation()
             self.updateStatusIcon()
-            self.showNotification(title: "TextEnhancer", message: "Text enhancement complete!", isStarting: false)
         }
     }
     
@@ -637,56 +630,6 @@ class MenuBarManager: ObservableObject {
         }
     }
     
-    private func requestNotificationPermissions() {
-        // Check if we're running in a proper app bundle and not from swift run
-        guard Bundle.main.bundleIdentifier != nil,
-              !Bundle.main.bundlePath.contains("/.build/") else {
-            print("ℹ️  Skipping notification permissions request - not running in app bundle")
-            return
-        }
-        
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if let error = error {
-                print("⚠️  Notification permission error: \(error)")
-            } else if granted {
-                print("✅ Notification permissions granted")
-            } else {
-                print("❌ Notification permissions denied")
-            }
-        }
-    }
-    
-    private func showNotification(title: String, message: String, isStarting: Bool) {
-        guard configManager.configuration.enableNotifications else { return }
-        
-        // Check if we're running in a proper app bundle and not from swift run
-        guard Bundle.main.bundleIdentifier != nil,
-              !Bundle.main.bundlePath.contains("/.build/") else {
-            print("ℹ️  Skipping notification - not running in app bundle")
-            return
-        }
-        
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = message
-        content.sound = UNNotificationSound.default
-        
-        // Different icons for different states
-        if isStarting {
-            content.badge = 1
-        } else {
-            content.badge = 0
-        }
-        
-        let identifier = isStarting ? "text-processing-started" : "text-processing-finished"
-        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("⚠️  Failed to show notification: \(error)")
-            }
-        }
-    }
     
     deinit {
         animationTimer?.invalidate()
