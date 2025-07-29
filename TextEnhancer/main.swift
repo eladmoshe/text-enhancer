@@ -3,7 +3,7 @@ import AppKit
 
 // MARK: - Version Management
 struct AppVersion {
-    static let buildNumber: Int = 1005
+    static let buildNumber: Int = 1009
     static let version: String = "1.0.3"
     static let fullVersion: String = "\(version) (build \(buildNumber))"
 }
