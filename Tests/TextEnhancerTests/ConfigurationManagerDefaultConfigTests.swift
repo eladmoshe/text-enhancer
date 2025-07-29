@@ -28,7 +28,6 @@ final class ConfigurationManagerDefaultConfigTests: XCTestCase {
         XCTAssertEqual(configManager.configuration.maxTokens, 1000)
         XCTAssertEqual(configManager.configuration.timeout, 30.0)
         XCTAssertTrue(configManager.configuration.showStatusIcon)
-        XCTAssertTrue(configManager.configuration.enableNotifications)
         XCTAssertTrue(configManager.configuration.autoSave)
         XCTAssertEqual(configManager.configuration.logLevel, "info")
     }
@@ -65,7 +64,6 @@ final class ConfigurationManagerDefaultConfigTests: XCTestCase {
             maxTokens: 2000,
             timeout: 60.0,
             showStatusIcon: false,
-            enableNotifications: false,
             autoSave: false,
             logLevel: "debug",
             apiProviders: APIProviders(
@@ -91,7 +89,6 @@ final class ConfigurationManagerDefaultConfigTests: XCTestCase {
         XCTAssertEqual(configManager.configuration.maxTokens, 2000)
         XCTAssertEqual(configManager.configuration.timeout, 60.0)
         XCTAssertFalse(configManager.configuration.showStatusIcon)
-        XCTAssertFalse(configManager.configuration.enableNotifications)
         XCTAssertFalse(configManager.configuration.autoSave)
         XCTAssertEqual(configManager.configuration.logLevel, "debug")
         XCTAssertEqual(configManager.configuration.apiProviders.claude.apiKey, "test-claude-key")

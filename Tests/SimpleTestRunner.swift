@@ -63,7 +63,6 @@ class SimpleTestRunner {
             maxTokens: 2000,
             timeout: 60.0,
             showStatusIcon: false,
-            enableNotifications: false,
             autoSave: false,
             logLevel: "debug"
         )

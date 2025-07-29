@@ -62,7 +62,6 @@ class SettingsViewTests: XCTestCase {
             maxTokens: 2000,
             timeout: 60.0,
             showStatusIcon: false,
-            enableNotifications: false,
             autoSave: false,
             logLevel: "debug",
             apiProviders: APIProviders(
@@ -175,7 +174,6 @@ class SettingsViewTests: XCTestCase {
             maxTokens: 1000,
             timeout: 30.0,
             showStatusIcon: true,
-            enableNotifications: true,
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders(
@@ -204,7 +202,6 @@ class SettingsViewTests: XCTestCase {
             maxTokens: 1000,
             timeout: 30.0,
             showStatusIcon: true,
-            enableNotifications: true,
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders(

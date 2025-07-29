@@ -32,7 +32,6 @@ class MenuBarManagerTests: XCTestCase {
             maxTokens: 1000,
             timeout: 30.0,
             showStatusIcon: true,
-            enableNotifications: false, // Disable notifications to avoid UserNotifications issues in tests
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders(
@@ -167,8 +166,4 @@ class MenuBarManagerTests: XCTestCase {
         XCTAssertNotNil(textProcessor)
     }
     
-    func testNotificationConfigurationRespected() {
-        // Test that notification settings are respected (should be disabled in test)
-        XCTAssertFalse(configManager.configuration.enableNotifications, "Notifications should be disabled in test configuration")
-    }
 } 

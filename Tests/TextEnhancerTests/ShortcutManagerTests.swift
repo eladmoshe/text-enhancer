@@ -49,7 +49,6 @@ final class ShortcutManagerTests: XCTestCase {
             maxTokens: 1000,
             timeout: 30.0,
             showStatusIcon: true,
-            enableNotifications: true,
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders(
@@ -111,7 +110,6 @@ final class ShortcutManagerTests: XCTestCase {
             maxTokens: 1000,
             timeout: 30.0,
             showStatusIcon: true,
-            enableNotifications: true,
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders(
@@ -143,7 +141,6 @@ final class ShortcutManagerTests: XCTestCase {
             maxTokens: 1000,
             timeout: 30.0,
             showStatusIcon: true,
-            enableNotifications: true,
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders(

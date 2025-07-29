@@ -30,7 +30,6 @@ final class ShortcutMenuControllerTests: XCTestCase {
             maxTokens: 1000,
             timeout: 30.0,
             showStatusIcon: true,
-            enableNotifications: false,
             autoSave: true,
             logLevel: "info",
             apiProviders: APIProviders.default

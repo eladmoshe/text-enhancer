@@ -42,7 +42,6 @@ TextEnhancer now uses JSON-based configuration instead of a settings UI. This pr
 
 ### UI Settings
 - `showStatusIcon`: Show/hide the menu bar icon (default: true)
-- `enableNotifications`: Enable system notifications (default: true)
 - `logLevel`: Logging level ("debug", "info", "warning", "error")
 
 ### Shortcuts
