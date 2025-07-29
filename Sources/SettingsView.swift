@@ -567,7 +567,7 @@ struct ShortcutEditView: View {
             self._name = State(initialValue: "")
             self._prompt = State(initialValue: "")
             self._provider = State(initialValue: .claude)
-            self._model = State(initialValue: "claude-3-5-sonnet-20241022")
+            self._model = State(initialValue: "claude-sonnet-4-20250514")
             self._includeScreenshot = State(initialValue: false)
             self._selectedModifiers = State(initialValue: [.control, .option])
             self._selectedKeyCode = State(initialValue: 18)
@@ -618,7 +618,7 @@ struct ShortcutEditView: View {
                                 .pickerStyle(.segmented)
                                 .onChange(of: provider) { newProvider in
                                     // Update model to default for the new provider
-                                    model = newProvider == .claude ? "claude-3-5-sonnet-20241022" : "gpt-4o"
+                                    model = newProvider == .claude ? "claude-sonnet-4-20250514" : "gpt-4o"
                                     
                                     // Fetch models when provider changes
                                     Task {

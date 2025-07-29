@@ -132,7 +132,7 @@ struct ShortcutMenuView: View {
 
     private func formatModelName(_ model: String) -> String {
         switch model {
-        case "claude-3-5-sonnet-20241022": "Sonnet"
+        case "claude-sonnet-4-20250514": "Sonnet"
         case "claude-opus-4-20250514": "Opus"
         case "gpt-4o": "4o"
         case "gpt-4o-mini": "4o mini"
@@ -278,7 +278,7 @@ struct ShortcutMenuItemView: View {
 
     private func formatModelName(_ model: String) -> String {
         switch model {
-        case "claude-3-5-sonnet-20241022": "Sonnet"
+        case "claude-sonnet-4-20250514": "Sonnet"
         case "claude-opus-4-20250514": "Opus"
         case "gpt-4o": "4o"
         case "gpt-4o-mini": "4o mini"
@@ -302,7 +302,7 @@ struct ShortcutMenuItemView: View {
                 modifiers: [.control, .option],
                 prompt: "Improve the writing quality and clarity of this text while maintaining its original meaning and tone.",
                 provider: .claude,
-                model: "claude-3-5-sonnet-20241022",
+                model: "claude-sonnet-4-20250514",
                 includeScreenshot: false
             ),
             ShortcutConfiguration(

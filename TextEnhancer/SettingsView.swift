@@ -357,7 +357,7 @@ struct SettingsView: View {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(
                     apiKey: claudeApiKey,
-                    model: "claude-3-5-sonnet-20241022", // Default model for global config
+                    model: "claude-sonnet-4-20250514", // Default model for global config
                     enabled: claudeEnabled
                 ),
                 openai: APIProviderConfig(
@@ -496,7 +496,7 @@ struct ShortcutRowView: View {
     
     private func formatModelName(_ model: String) -> String {
         switch model {
-        case "claude-3-5-sonnet-20241022": return "Sonnet"
+        case "claude-sonnet-4-20250514": return "Sonnet"
         case "claude-opus-4-20250514": return "Opus"
         case "gpt-4o": return "4o"
         case "gpt-4o-mini": return "4o mini"
@@ -572,7 +572,7 @@ struct ShortcutEditView: View {
             self._name = State(initialValue: "")
             self._prompt = State(initialValue: "")
             self._provider = State(initialValue: .claude)
-            self._model = State(initialValue: "claude-3-5-sonnet-20241022")
+            self._model = State(initialValue: "claude-sonnet-4-20250514")
             self._includeScreenshot = State(initialValue: false)
             self._selectedModifiers = State(initialValue: [.control, .option])
             self._selectedKeyCode = State(initialValue: 18)
@@ -623,7 +623,7 @@ struct ShortcutEditView: View {
                                 .pickerStyle(.segmented)
                                 .onChange(of: provider) { _, newProvider in
                                     // Update model to default for the new provider
-                                    model = newProvider == .claude ? "claude-3-5-sonnet-20241022" : "gpt-4o"
+                                    model = newProvider == .claude ? "claude-sonnet-4-20250514" : "gpt-4o"
                                     
                                     // Fetch models when provider changes
                                     Task {

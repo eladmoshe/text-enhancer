@@ -406,7 +406,7 @@ final class TextProcessorTests: XCTestCase {
             modifiers: [.control, .option],
             prompt: "Expand this text with more details",
             provider: .claude,
-            model: "claude-3-5-sonnet-20241022",
+            model: "claude-sonnet-4-20250514",
             includeScreenshot: false
         )
         
@@ -444,7 +444,7 @@ final class TextProcessorTests: XCTestCase {
             modifiers: [.control, .option],
             prompt: "Describe what you see in this screenshot",
             provider: .claude,
-            model: "claude-3-5-sonnet-20241022",
+            model: "claude-sonnet-4-20250514",
             includeScreenshot: true
         )
         
@@ -481,7 +481,7 @@ final class TextProcessorTests: XCTestCase {
             modifiers: [.control, .option],
             prompt: "This will fail",
             provider: .claude,
-            model: "claude-3-5-sonnet-20241022",
+            model: "claude-sonnet-4-20250514",
             includeScreenshot: false
         )
         
@@ -519,7 +519,7 @@ final class TextProcessorTests: XCTestCase {
             modifiers: [.control, .option],
             prompt: "Performance test",
             provider: .claude,
-            model: "claude-3-5-sonnet-20241022",
+            model: "claude-sonnet-4-20250514",
             includeScreenshot: false
         )
         

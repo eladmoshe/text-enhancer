@@ -266,7 +266,7 @@ final class ClaudeServiceTests: XCTestCase {
         
         // When: Calling enhanceText
         do {
-            _ = try await service.enhanceText("test", with: "test", using: "claude-3-5-sonnet-20241022")
+            _ = try await service.enhanceText("test", with: "test", using: "claude-sonnet-4-20250514")
             XCTFail("Should have thrown an error")
         } catch {
             // Then: Should have attempted exactly 3 times
@@ -279,7 +279,7 @@ final class ClaudeServiceTests: XCTestCase {
         // Given: A service with empty API key (non-retryable error)
         // Modify the existing configuration to have empty Claude API key
         let currentConfig = configManager.configuration
-        let emptyClaudeConfig = APIProviderConfig(apiKey: "", model: "claude-3-5-sonnet-20241022", enabled: true)
+        let emptyClaudeConfig = APIProviderConfig(apiKey: "", model: "claude-sonnet-4-20250514", enabled: true)
         let modifiedApiProviders = APIProviders(claude: emptyClaudeConfig, openai: currentConfig.apiProviders.openai)
         
         let emptyKeyConfig = AppConfiguration(
@@ -299,7 +299,7 @@ final class ClaudeServiceTests: XCTestCase {
         
         // When: Calling enhanceText
         do {
-            _ = try await service.enhanceText("test", with: "test", using: "claude-3-5-sonnet-20241022")
+            _ = try await service.enhanceText("test", with: "test", using: "claude-sonnet-4-20250514")
             XCTFail("Should have thrown an error")
         } catch {
             // Then: Should not have made any network requests (fails before network call)
@@ -319,7 +319,7 @@ final class ClaudeServiceTests: XCTestCase {
         
         // When: Calling enhanceText
         do {
-            _ = try await service.enhanceText("test", with: "test", using: "claude-3-5-sonnet-20241022")
+            _ = try await service.enhanceText("test", with: "test", using: "claude-sonnet-4-20250514")
             XCTFail("Should have thrown an error")
         } catch {
             // Then: Should have attempted exactly 3 times
@@ -347,7 +347,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "{\\"enhancedText\\": \\"Enhanced text\\"}"
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant",
             "usage": {
                 "input_tokens": 10,
@@ -361,7 +361,7 @@ final class ClaudeServiceTests: XCTestCase {
         
         // When: Calling enhanceText
         do {
-            let result = try await service.enhanceText("test", with: "test", using: "claude-3-5-sonnet-20241022")
+            let result = try await service.enhanceText("test", with: "test", using: "claude-sonnet-4-20250514")
             
             // Then: Should succeed and have made exactly 2 attempts
             XCTAssertEqual(result, "Enhanced text")
@@ -387,7 +387,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "I can see a web browser displaying a code editor with Swift code. The code appears to be implementing a service class with various methods for API communication."
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant",
             "usage": {"input_tokens": 100, "output_tokens": 50}
         }
@@ -399,7 +399,7 @@ final class ClaudeServiceTests: XCTestCase {
             let result = try await claudeService.enhanceText(
                 "[Screenshot analysis requested]", 
                 with: "Describe what you see in this screenshot", 
-                using: "claude-3-5-sonnet-20241022",
+                using: "claude-sonnet-4-20250514",
                 screenContext: "base64encodedimage"
             )
             
@@ -424,7 +424,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "{\\"enhancedText\\": \\"This is the improved text with better grammar and clarity.\\"}"
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022", 
+            "model": "claude-sonnet-4-20250514", 
             "role": "assistant",
             "usage": {"input_tokens": 20, "output_tokens": 30}
         }
@@ -436,7 +436,7 @@ final class ClaudeServiceTests: XCTestCase {
             let result = try await claudeService.enhanceText(
                 "This text needs improvement",
                 with: "Please improve this text",
-                using: "claude-3-5-sonnet-20241022"
+                using: "claude-sonnet-4-20250514"
             )
             
             // Then: Should extract JSON and return enhanced text
@@ -460,7 +460,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "Based on the screenshot and your text 'help me fix this code', I can see there's a syntax error on line 15. You're missing a closing parenthesis in the function call."
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant", 
             "usage": {"input_tokens": 80, "output_tokens": 40}
         }
@@ -472,7 +472,7 @@ final class ClaudeServiceTests: XCTestCase {
             let result = try await claudeService.enhanceText(
                 "help me fix this code",
                 with: "Please analyze the code in the screenshot and help fix the issue",
-                using: "claude-3-5-sonnet-20241022",
+                using: "claude-sonnet-4-20250514",
                 screenContext: "base64encodedimage"
             )
             
@@ -499,7 +499,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "I can see your code has a JSON structure like {\\"key\\": \\"value\\"} in the screenshot. This appears to be configuration data."
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant",
             "usage": {"input_tokens": 60, "output_tokens": 25}
         }
@@ -511,7 +511,7 @@ final class ClaudeServiceTests: XCTestCase {
             let result = try await claudeService.enhanceText(
                 "[Screenshot analysis requested]",
                 with: "What do you see?",
-                using: "claude-3-5-sonnet-20241022",
+                using: "claude-sonnet-4-20250514",
                 screenContext: "base64encodedimage"
             )
             
@@ -536,7 +536,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "Here's the improved text: This is better now."
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant",
             "usage": {"input_tokens": 15, "output_tokens": 20}
         }
@@ -548,7 +548,7 @@ final class ClaudeServiceTests: XCTestCase {
             _ = try await claudeService.enhanceText(
                 "improve this text", 
                 with: "Make it better",
-                using: "claude-3-5-sonnet-20241022"
+                using: "claude-sonnet-4-20250514"
             )
             XCTFail("Should have thrown JSON extraction error")
         } catch ClaudeError.invalidJSONResponse {
@@ -574,7 +574,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "{\\"enhancedText\\": \\"Enhanced text without screenshot context.\\"}"
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant",
             "usage": {"input_tokens": 10, "output_tokens": 15}
         }
@@ -586,7 +586,7 @@ final class ClaudeServiceTests: XCTestCase {
             let result = try await claudeService.enhanceText(
                 "regular text",
                 with: "enhance this",
-                using: "claude-3-5-sonnet-20241022",
+                using: "claude-sonnet-4-20250514",
                 screenContext: ""
             )
             
@@ -610,7 +610,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "{\\"enhancedText\\": \\"Enhanced text without any screenshot.\\"}"
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant",
             "usage": {"input_tokens": 8, "output_tokens": 12}
         }
@@ -622,7 +622,7 @@ final class ClaudeServiceTests: XCTestCase {
             let result = try await claudeService.enhanceText(
                 "text to enhance",
                 with: "please improve",
-                using: "claude-3-5-sonnet-20241022",
+                using: "claude-sonnet-4-20250514",
                 screenContext: nil
             )
             
@@ -649,7 +649,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "Here's what I see in the screenshot: A code editor with Swift code."
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant",
             "usage": {"input_tokens": 50, "output_tokens": 25}
         }
@@ -661,7 +661,7 @@ final class ClaudeServiceTests: XCTestCase {
             _ = try await claudeService.enhanceText(
                 "screenshot analysis",
                 with: "Analyze this screenshot for JSON data",
-                using: "claude-3-5-sonnet-20241022",
+                using: "claude-sonnet-4-20250514",
                 screenContext: nil // This simulates using text shortcut for screenshot content
             )
             XCTFail("Should have thrown context-aware error")
@@ -689,7 +689,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "This text is about screenshots but I can't see any image."
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant",
             "usage": {"input_tokens": 30, "output_tokens": 20}
         }
@@ -701,7 +701,7 @@ final class ClaudeServiceTests: XCTestCase {
             _ = try await claudeService.enhanceText(
                 "analyze what you see in screenshot",
                 with: "Describe what you see in this screenshot",
-                using: "claude-3-5-sonnet-20241022",
+                using: "claude-sonnet-4-20250514",
                 screenContext: "base64image" // Has screenshot but prompt suggests text analysis
             )
             // This should succeed as it's handled properly
@@ -728,7 +728,7 @@ final class ClaudeServiceTests: XCTestCase {
                     "text": "This is just plain text, not JSON format"
                 }
             ],
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-20250514",
             "role": "assistant",
             "usage": {"input_tokens": 20, "output_tokens": 15}
         }
@@ -740,7 +740,7 @@ final class ClaudeServiceTests: XCTestCase {
             _ = try await claudeService.enhanceText(
                 "improve this text",
                 with: "Expand this text with more details",
-                using: "claude-3-5-sonnet-20241022"
+                using: "claude-sonnet-4-20250514"
             )
             XCTFail("Should have thrown enhanced error")
         } catch ClaudeError.invalidJSONResponseWithContext(let message, let suggestion) {
