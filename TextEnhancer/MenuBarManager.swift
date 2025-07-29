@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import UserNotifications
 
-class MenuBarManager: ObservableObject {
+class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
     private let shortcutManager: ShortcutManager
     private let configManager: ConfigurationManager
     private let textProcessor: TextProcessor
@@ -19,6 +19,8 @@ class MenuBarManager: ObservableObject {
         self.shortcutManager = shortcutManager
         self.configManager = configManager
         self.textProcessor = textProcessor
+        
+        super.init()
         
         // Listen for processing status changes
         NotificationCenter.default.addObserver(
@@ -70,10 +72,6 @@ class MenuBarManager: ObservableObject {
         self.statusItem = statusItem
         
         let menu = NSMenu()
-        
-        // Force a fresh permission check every time the menu is set up
-        // This ensures we get current permission status
-        forcePermissionRefresh()
         
         // Status item
         let statusMenuItem = NSMenuItem(title: "TextEnhancer", action: nil, keyEquivalent: "")
@@ -157,6 +155,11 @@ class MenuBarManager: ObservableObject {
         let logItem = NSMenuItem(title: "Open Log File", action: #selector(openLogFile), keyEquivalent: "l")
         logItem.target = self
         menu.addItem(logItem)
+        
+        // Refresh Status (for debugging)
+        let refreshItem = NSMenuItem(title: "🔄 Refresh Status", action: #selector(manualRefreshStatus), keyEquivalent: "")
+        refreshItem.target = self
+        menu.addItem(refreshItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -171,8 +174,20 @@ class MenuBarManager: ObservableObject {
         menu.addItem(quitItem)
 
         statusItem.menu = menu
+        menu.delegate = self
         NSLog("🔧 MenuBarManager: Menu setup complete! Total items: \(menu.items.count)")
         NSLog("🔧 MenuBarManager: Menu items: \(menu.items.map { $0.title })")
+    }
+    
+    // MARK: - NSMenuDelegate
+    
+    func menuWillOpen(_ menu: NSMenu) {
+        // Refresh permission status every time the menu opens
+        print("🔧 MenuBarManager: Menu opening, refreshing permissions...")
+        forcePermissionRefresh()
+        
+        // Also refresh the menu to ensure latest status is shown
+        refreshMenu()
     }
     
     private func refreshMenu() {
@@ -181,8 +196,8 @@ class MenuBarManager: ObservableObject {
     }
     
     private func startPermissionMonitoring() {
-        // Check permissions every 2 seconds to detect changes
-        permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        // Check permissions every 1 second to detect changes faster
+        permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.checkPermissionChanges()
         }
     }
@@ -190,7 +205,11 @@ class MenuBarManager: ObservableObject {
     private func checkPermissionChanges() {
         let currentStatus = AXIsProcessTrusted()
         
-        // Always log current status for debugging
+        // Always log current status for debugging - every time
+        print("🔍 Permission check: current=\(currentStatus), last=\(lastAccessibilityStatus)")
+        print("🔍 App path: \(Bundle.main.bundlePath)")
+        print("🔍 Bundle ID: \(Bundle.main.bundleIdentifier ?? "nil")")
+        
         if currentStatus != lastAccessibilityStatus {
             print("🔄 Accessibility permission status changed: \(lastAccessibilityStatus) -> \(currentStatus)")
             print("📋 Bundle ID: \(Bundle.main.bundleIdentifier ?? "nil")")
@@ -212,12 +231,25 @@ class MenuBarManager: ObservableObject {
         print("🔄 Force refreshing permission status...")
         print("   Current accessibility status: \(currentStatus)")
         print("   Last known status: \(previousStatus)")
+        print("   App bundle path: \(Bundle.main.bundlePath)")
+        print("   App bundle identifier: \(Bundle.main.bundleIdentifier ?? "nil")")
+        
+        // Try enhanced permission check
+        let enhancedOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+        let enhancedStatus = AXIsProcessTrustedWithOptions(enhancedOptions as CFDictionary)
+        print("   Enhanced check (no prompt): \(enhancedStatus)")
         
         // Update our internal state
+        let statusChanged = currentStatus != previousStatus
         lastAccessibilityStatus = currentStatus
         
         // Update the status icon
         updateStatusIcon()
+        
+        // If status changed, refresh the menu
+        if statusChanged {
+            refreshMenu()
+        }
         
         // Also check screen recording for completeness
         let screenRecordingStatus: Bool
@@ -274,13 +306,26 @@ class MenuBarManager: ObservableObject {
         
         if !currentStatus {
             print("🔐 MenuBarManager: Requesting accessibility permissions...")
+            
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
             let newStatus = AXIsProcessTrustedWithOptions(options as CFDictionary)
             print("🔐 MenuBarManager: Permission request result: \(newStatus)")
             
-            // Also try through app delegate as backup
-            if let appDelegate = NSApp.delegate as? AppDelegate {
-                appDelegate.promptForAccessibilityPermissions()
+            // Immediately make an AX API call to force the system to register this specific app instance
+            // This ensures the permission dialog registers the app from its current running location
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                let systemElement = AXUIElementCreateSystemWide()
+                var focused: CFTypeRef?
+                let result = AXUIElementCopyAttributeValue(systemElement, kAXFocusedUIElementAttribute as CFString, &focused)
+                print("🔐 MenuBarManager: AX API call to register app location - result: \(result)")
+            }
+            
+            // If we still don't have permission, open System Settings so the user can approve the newly-added entry
+            if !newStatus {
+                print("🔐 MenuBarManager: Permission not yet granted – opening System Settings > Accessibility so the user can enable it")
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                    NSWorkspace.shared.open(url)
+                }
             }
         } else {
             print("🔐 MenuBarManager: Permissions already granted")
@@ -288,6 +333,7 @@ class MenuBarManager: ObservableObject {
         
         // Update the menu after requesting permissions
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.forcePermissionRefresh()
             self.refreshMenu()
         }
     }
@@ -333,6 +379,7 @@ class MenuBarManager: ObservableObject {
         
         // Update the menu after requesting permissions
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.forcePermissionRefresh()
             self.refreshMenu()
         }
     }
@@ -445,6 +492,12 @@ class MenuBarManager: ObservableObject {
     @objc private func openLogFile() {
         let url = Logger.shared.logFileURL
         NSWorkspace.shared.open(url)
+    }
+    
+    @objc private func manualRefreshStatus() {
+        print("🔄 MenuBarManager: Manual refresh status triggered.")
+        forcePermissionRefresh()
+        refreshMenu()
     }
     
     @objc private func configurationChanged() {
@@ -698,6 +751,13 @@ class MenuBarManager: ObservableObject {
         animationTimer?.invalidate()
         permissionCheckTimer?.invalidate()
         NotificationCenter.default.removeObserver(self)
+    }
+    
+    /// Opens System Settings directly to the Accessibility pane so the user can tick the checkbox for TextEnhancer.
+    private func openAccessibilityPreferences() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
     }
 }
 

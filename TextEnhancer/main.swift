@@ -3,8 +3,8 @@ import AppKit
 
 // MARK: - Version Management
 struct AppVersion {
-    static let buildNumber: Int = 1002
-    static let version: String = "1.0.2"
+    static let buildNumber: Int = 1005
+    static let version: String = "1.0.3"
     static let fullVersion: String = "\(version) (build \(buildNumber))"
 }
 
@@ -155,7 +155,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             // Try to activate the existing instance
             if let existingInstance = instances.first {
-                existingInstance.activate(options: [.activateIgnoringOtherApps])
+                existingInstance.activate()
                 print("✅ Activated existing TextEnhancer instance")
             }
             

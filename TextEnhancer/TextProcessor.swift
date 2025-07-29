@@ -234,7 +234,7 @@ class DefaultAccessibilityChecker: AccessibilityChecker {
         await MainActor.run {
             print("🔐 AccessibilityChecker: Requesting accessibility permissions...")
             
-            // Try the direct approach first
+            // Request accessibility permissions with prompt
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
             let newStatus = AXIsProcessTrustedWithOptions(options as CFDictionary)
             print("🔐 AccessibilityChecker: Direct request result: \(newStatus)")
@@ -450,27 +450,11 @@ class TextProcessor: ObservableObject {
                 print("🔐 TextProcessor: After permission request - Enhanced check: \(recheck)")
                 
                 if !recheck {
-                    // Give detailed diagnostic information
-                    await alertPresenter.showError(
-                        title: "🔒 Accessibility Permission Required",
-                        message: """
-                        Accessibility permission is required for text selection and replacement.
-                        
-                        Debug Info:
-                        • Basic trusted: \(basicTrusted)
-                        • Enhanced check: \(enhancedCheck)
-                        • Bundle ID: \(Bundle.main.bundleIdentifier ?? "none")
-                        
-                        Fix: System Settings → Privacy & Security → Accessibility
-                        → Remove TextEnhancer (if present) → Add it again → Enable
-                        
-                        If this persists, try restarting the app.
-                        """,
-                        actions: [
-                            .openSystemSettings(panel: "com.apple.preference.security"),
-                            .ok()
-                        ]
-                    )
+                    // Silently open System Settings to Accessibility panel
+                    print("🔐 TextProcessor: Opening System Settings for accessibility permissions")
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                        NSWorkspace.shared.open(url)
+                    }
                     return
                 }
             }

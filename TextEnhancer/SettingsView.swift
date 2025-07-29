@@ -153,7 +153,7 @@ struct SettingsView: View {
                                     Toggle("Enable Claude", isOn: $claudeEnabled)
                                         .toggleStyle(.switch)
                                         .font(.subheadline)
-                                        .onChange(of: claudeEnabled) { _ in saveConfiguration() }
+                                        .onChange(of: claudeEnabled) { saveConfiguration() }
                                     Spacer()
                                 }
                                 
@@ -173,7 +173,7 @@ struct SettingsView: View {
                                                 SecureField("Enter Claude API key", text: $claudeApiKey)
                                                     .textFieldStyle(.roundedBorder)
                                                     .font(.subheadline)
-                                                    .onChange(of: claudeApiKey) { _ in 
+                                                    .onChange(of: claudeApiKey) { 
                                                         saveConfiguration()
                                                         if !claudeApiKey.isEmpty {
                                                             isClaudeKeyLocked = true
@@ -212,7 +212,7 @@ struct SettingsView: View {
                                     Toggle("Enable OpenAI", isOn: $openaiEnabled)
                                         .toggleStyle(.switch)
                                         .font(.subheadline)
-                                        .onChange(of: openaiEnabled) { _ in saveConfiguration() }
+                                        .onChange(of: openaiEnabled) { saveConfiguration() }
                                     Spacer()
                                 }
                                 
@@ -232,7 +232,7 @@ struct SettingsView: View {
                                                 SecureField("Enter OpenAI API key", text: $openaiApiKey)
                                                     .textFieldStyle(.roundedBorder)
                                                     .font(.subheadline)
-                                                    .onChange(of: openaiApiKey) { _ in 
+                                                    .onChange(of: openaiApiKey) { 
                                                         saveConfiguration()
                                                         if !openaiApiKey.isEmpty {
                                                             isOpenaiKeyLocked = true
@@ -280,7 +280,7 @@ struct SettingsView: View {
                                     .textFieldStyle(.roundedBorder)
                                     .frame(width: 80)
                                     .font(.subheadline)
-                                    .onChange(of: maxTokens) { _ in saveConfiguration() }
+                                    .onChange(of: maxTokens) { saveConfiguration() }
                                 Spacer()
                             }
                             
@@ -292,7 +292,7 @@ struct SettingsView: View {
                                     .textFieldStyle(.roundedBorder)
                                     .frame(width: 80)
                                     .font(.subheadline)
-                                    .onChange(of: timeout) { _ in saveConfiguration() }
+                                    .onChange(of: timeout) { saveConfiguration() }
                                 Text("seconds")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
@@ -301,10 +301,10 @@ struct SettingsView: View {
                             
                             Toggle("Show Status Icon", isOn: $showStatusIcon)
                                 .font(.subheadline)
-                                .onChange(of: showStatusIcon) { _ in saveConfiguration() }
+                                .onChange(of: showStatusIcon) { saveConfiguration() }
                             Toggle("Enable Notifications", isOn: $enableNotifications)
                                 .font(.subheadline)
-                                .onChange(of: enableNotifications) { _ in saveConfiguration() }
+                                .onChange(of: enableNotifications) { saveConfiguration() }
                         }
                         .padding(.vertical, 4)
                     }
@@ -621,7 +621,7 @@ struct ShortcutEditView: View {
                                     }
                                 }
                                 .pickerStyle(.segmented)
-                                .onChange(of: provider) { newProvider in
+                                .onChange(of: provider) { _, newProvider in
                                     // Update model to default for the new provider
                                     model = newProvider == .claude ? "claude-3-5-sonnet-20241022" : "gpt-4o"
                                     
