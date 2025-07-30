@@ -16,7 +16,7 @@ jobs:
   # Build and Test Job
   build-and-test:
     name: Build and Test (${{ matrix.swift-version }})
-    runs-on: macos-14
+    runs-on: macos-latest
     strategy:
       matrix:
         swift-version: ['5.9']
@@ -41,6 +41,11 @@ jobs:
           ${{ runner.os }}-swift-${{ matrix.swift-version }}-
           ${{ runner.os }}-swift-
 
+    - name: Setup Xcode
+      run: |
+        # Use the latest available Xcode version
+        sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        
     - name: Swift Version Info
       run: |
         swift --version
@@ -80,7 +85,7 @@ jobs:
   # Code Quality Job
   code-quality:
     name: Code Quality
-    runs-on: macos-14
+    runs-on: macos-latest
     
     steps:
     - name: Checkout Code
@@ -127,7 +132,7 @@ jobs:
   # Security Scanning Job
   security:
     name: Security Scan
-    runs-on: macos-14
+    runs-on: macos-latest
     
     steps:
     - name: Checkout Code
@@ -162,7 +167,7 @@ jobs:
   # App Bundle Build Job
   bundle-build:
     name: Build App Bundle
-    runs-on: macos-14
+    runs-on: macos-latest
     if: github.event_name == 'release' || github.ref == 'refs/heads/main'
     needs: [build-and-test, code-quality]
     
@@ -193,7 +198,7 @@ jobs:
   # Release Job (only on release events)
   release:
     name: Release
-    runs-on: macos-14
+    runs-on: macos-latest
     if: github.event_name == 'release'
     needs: [build-and-test, code-quality, security, bundle-build]
     
