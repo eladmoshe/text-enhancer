@@ -24,60 +24,67 @@ class ScreenCaptureService {
     private func captureScreenUsingScreenCaptureKit() -> NSImage? {
         print("🔧 ScreenCaptureService: Using real ScreenCaptureKit for screen capture")
         
-        // Use semaphore for async-to-sync bridging
-        let semaphore = DispatchSemaphore(value: 0)
-        var capturedImage: NSImage?
-        var captureError: Error?
+        // Use DispatchGroup for proper async-to-sync bridging without capture issues
+        let group = DispatchGroup()
+        var result: Result<NSImage, Error>?
         
+        group.enter()
         Task {
             do {
-                // Get available displays using SCShareableContent
-                let availableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-                
-                guard let primaryDisplay = availableContent.displays.first else {
-                    print("❌ ScreenCaptureService: No displays found")
-                    captureError = ScreenCaptureError.noDisplaysFound
-                    semaphore.signal()
-                    return
-                }
-                
-                print("🔧 ScreenCaptureService: Found display: \(primaryDisplay.displayID), size: \(primaryDisplay.width)x\(primaryDisplay.height)")
-                
-                // Create screen capture configuration
-                let filter = SCContentFilter(display: primaryDisplay, excludingWindows: [])
-                let configuration = SCStreamConfiguration()
-                configuration.width = primaryDisplay.width
-                configuration.height = primaryDisplay.height
-                configuration.minimumFrameInterval = CMTime(value: 1, timescale: 60) // 60 FPS
-                configuration.queueDepth = 1
-                
-                // Capture screenshot using SCScreenshotManager
-                let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
-                
-                // Convert CGImage to NSImage
-                capturedImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
-                print("✅ ScreenCaptureService: Successfully captured real screen content using ScreenCaptureKit")
-                
+                let image = try await performScreenCapture()
+                result = .success(image)
             } catch {
-                print("❌ ScreenCaptureService: ScreenCaptureKit error: \(error)")
-                captureError = error
+                result = .failure(error)
             }
-            
-            semaphore.signal()
+            group.leave()
         }
         
         // Wait for async operation to complete (with timeout)
-        let timeoutResult = semaphore.wait(timeout: .now() + .seconds(5))
+        let timeoutResult = group.wait(timeout: .now() + .seconds(5))
         
         if timeoutResult == .timedOut {
             print("❌ ScreenCaptureService: ScreenCaptureKit capture timed out")
             return captureScreenUsingLegacyMethod() // Fallback to legacy method
         }
         
-        if let error = captureError {
+        switch result {
+        case .success(let image):
+            return image
+        case .failure(let error):
             print("❌ ScreenCaptureService: ScreenCaptureKit failed with error: \(error)")
             return captureScreenUsingLegacyMethod() // Fallback to legacy method
+        case .none:
+            print("❌ ScreenCaptureService: Unexpected nil result")
+            return captureScreenUsingLegacyMethod()
         }
+    }
+    
+    @available(macOS 14.0, *)
+    private func performScreenCapture() async throws -> NSImage {
+        // Get available displays using SCShareableContent
+        let availableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        
+        guard let primaryDisplay = availableContent.displays.first else {
+            print("❌ ScreenCaptureService: No displays found")
+            throw ScreenCaptureError.noDisplaysFound
+        }
+        
+        print("🔧 ScreenCaptureService: Found display: \(primaryDisplay.displayID), size: \(primaryDisplay.width)x\(primaryDisplay.height)")
+        
+        // Create screen capture configuration
+        let filter = SCContentFilter(display: primaryDisplay, excludingWindows: [])
+        let configuration = SCStreamConfiguration()
+        configuration.width = primaryDisplay.width
+        configuration.height = primaryDisplay.height
+        configuration.minimumFrameInterval = CMTime(value: 1, timescale: 60) // 60 FPS
+        configuration.queueDepth = 1
+        
+        // Capture screenshot using SCScreenshotManager
+        let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
+        
+        // Convert CGImage to NSImage
+        let capturedImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        print("✅ ScreenCaptureService: Successfully captured real screen content using ScreenCaptureKit")
         
         return capturedImage
     }
