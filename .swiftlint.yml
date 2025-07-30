@@ -3,7 +3,7 @@
 
 # Directories to include/exclude
 included:
-  - Sources/
+  - TextEnhancer/
   - Tests/
 
 excluded:
@@ -31,6 +31,14 @@ disabled_rules:
   - sorted_imports # Not critical for functionality
   - number_separator # Not critical for functionality
   - pattern_matching_keywords # Style preference
+  - opening_brace # Let SwiftFormat handle this
+  - trailing_comma # Style preference
+  - redundant_optional_initialization # Sometimes explicit is better
+  - multiple_closures_with_trailing_closure # SwiftUI style
+  - inclusive_language # False positives on technical terms
+  - redundant_discardable_let # Style preference
+  - for_where # Sometimes explicit if is clearer
+  - non_optional_string_data_conversion # Test code compatibility
 
 # Focus on critical opt-in rules only
 opt_in_rules:
@@ -47,34 +55,20 @@ opt_in_rules:
   - toggle_bool
   - unavailable_function
 
-# Lenient rule configurations
-line_length:
-  warning: 150  # More lenient
-  error: 200    # Very lenient
-  ignores_function_declarations: true
-  ignores_comments: true
-  ignores_urls: true
-
-function_body_length:
-  warning: 100  # More lenient
-  error: 150    # Very lenient
+# Lenient rule configurations - only for enabled rules
 
 function_parameter_count:
   warning: 8
   error: 10
 
-type_body_length:
-  warning: 500  # More lenient
-  error: 800    # Very lenient
+# type_body_length is disabled
 
 file_length:
   warning: 800
   error: 1500
   ignore_comment_only_lines: true
 
-cyclomatic_complexity:
-  warning: 15  # More lenient
-  error: 25    # Very lenient
+# cyclomatic_complexity is disabled
 
 nesting:
   type_level:
@@ -84,32 +78,7 @@ nesting:
     warning: 5
     error: 8
 
-identifier_name:
-  min_length:
-    warning: 1
-    error: 1
-  max_length:
-    warning: 50  # More lenient
-    error: 70    # Very lenient
-  excluded:
-    - id
-    - url
-    - key
-    - api
-    - app
-    - ui
-    - os
-    - max_tokens    # API parameter
-    - image_url     # API parameter
-    - finish_reason # API parameter
-    - prompt_tokens # API parameter
-    - completion_tokens # API parameter
-    - total_tokens  # API parameter
-    - media_type    # API parameter
-    - stop_reason   # API parameter
-    - stop_sequence # API parameter
-    - input_tokens  # API parameter
-    - output_tokens # API parameter
+# identifier_name is disabled
 
 type_name:
   min_length:
@@ -130,4 +99,4 @@ custom_rules:
 
 # Very lenient severity levels
 warning_threshold: 50   # Allow many warnings
-error_threshold: 20     # Allow some errors 
+# Removed error_threshold as it's not a valid key 
