@@ -120,38 +120,44 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        // Accessibility permission status - always get fresh status
-        NSLog("🔧 MenuBarManager: Adding accessibility item...")
+        // Permission items - show based on debug mode and permission status
+        let debugModeEnabled = configManager.configuration.debugModeEnabled
         let accessibilityStatus = AXIsProcessTrusted()
-        let accessibilityItem = NSMenuItem(
-            title: accessibilityStatus ? "✅ Accessibility: Enabled" : "⚠️ Accessibility: Disabled (Click to enable)",
-            action: accessibilityStatus ? #selector(debugPermissionStatus) : #selector(requestAccessibilityPermissions),
-            keyEquivalent: ""
-        )
-        accessibilityItem.target = self
-        accessibilityItem.isEnabled = true
-        menu.addItem(accessibilityItem)
-        NSLog("🔧 MenuBarManager: Added accessibility item: '\(accessibilityItem.title)'")
-
-        // Screen recording permission status - always get fresh status
-        NSLog("🔧 MenuBarManager: Adding screen recording item...")
         let screenRecordingStatus: Bool = if #available(macOS 10.15, *) {
             CGPreflightScreenCaptureAccess()
         } else {
             true // Always enabled on older macOS
         }
-
-        let screenRecordingItem = NSMenuItem(
-            title: screenRecordingStatus ? "✅ Screen Recording: Enabled" :
-                "⚠️ Screen Recording: Disabled (Click to enable)",
-            action: screenRecordingStatus ? #selector(debugPermissionStatus) :
-                #selector(requestScreenRecordingPermissions),
-            keyEquivalent: ""
-        )
-        screenRecordingItem.target = self
-        screenRecordingItem.isEnabled = true
-        menu.addItem(screenRecordingItem)
-        NSLog("🔧 MenuBarManager: Added screen recording item: '\(screenRecordingItem.title)'")
+        
+        // Show accessibility item if: permissions disabled OR debug mode enabled
+        if !accessibilityStatus || debugModeEnabled {
+            NSLog("🔧 MenuBarManager: Adding accessibility item...")
+            let accessibilityItem = NSMenuItem(
+                title: accessibilityStatus ? "✅ Accessibility: Enabled" : "⚠️ Accessibility: Disabled (Click to enable)",
+                action: accessibilityStatus ? #selector(debugPermissionStatus) : #selector(requestAccessibilityPermissions),
+                keyEquivalent: ""
+            )
+            accessibilityItem.target = self
+            accessibilityItem.isEnabled = true
+            menu.addItem(accessibilityItem)
+            NSLog("🔧 MenuBarManager: Added accessibility item: '\(accessibilityItem.title)'")
+        }
+        
+        // Show screen recording item if: permissions disabled OR debug mode enabled
+        if !screenRecordingStatus || debugModeEnabled {
+            NSLog("🔧 MenuBarManager: Adding screen recording item...")
+            let screenRecordingItem = NSMenuItem(
+                title: screenRecordingStatus ? "✅ Screen Recording: Enabled" :
+                    "⚠️ Screen Recording: Disabled (Click to enable)",
+                action: screenRecordingStatus ? #selector(debugPermissionStatus) :
+                    #selector(requestScreenRecordingPermissions),
+                keyEquivalent: ""
+            )
+            screenRecordingItem.target = self
+            screenRecordingItem.isEnabled = true
+            menu.addItem(screenRecordingItem)
+            NSLog("🔧 MenuBarManager: Added screen recording item: '\(screenRecordingItem.title)'")
+        }
 
         menu.addItem(NSMenuItem.separator())
 
@@ -160,30 +166,33 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        // Open Log File
-        let logItem = NSMenuItem(title: "Open Log File", action: #selector(openLogFile), keyEquivalent: "l")
-        logItem.target = self
-        menu.addItem(logItem)
+        // Debug items - only show when debug mode is enabled
+        if debugModeEnabled {
+            // Open Log File
+            let logItem = NSMenuItem(title: "Open Log File", action: #selector(openLogFile), keyEquivalent: "l")
+            logItem.target = self
+            menu.addItem(logItem)
 
-        // Refresh Status (for debugging)
-        let refreshItem = NSMenuItem(
-            title: "🔄 Refresh Status",
-            action: #selector(manualRefreshStatus),
-            keyEquivalent: ""
-        )
-        refreshItem.target = self
-        menu.addItem(refreshItem)
+            // Refresh Status (for debugging)
+            let refreshItem = NSMenuItem(
+                title: "🔄 Refresh Status",
+                action: #selector(manualRefreshStatus),
+                keyEquivalent: ""
+            )
+            refreshItem.target = self
+            menu.addItem(refreshItem)
+
+            // Force restart option
+            let restartItem = NSMenuItem(
+                title: "🔄 Force Restart App",
+                action: #selector(forceRestartApp),
+                keyEquivalent: "r"
+            )
+            restartItem.target = self
+            menu.addItem(restartItem)
+        }
 
         menu.addItem(NSMenuItem.separator())
-
-        // Force restart option
-        let restartItem = NSMenuItem(
-            title: "🔄 Force Restart App",
-            action: #selector(forceRestartApp),
-            keyEquivalent: "r"
-        )
-        restartItem.target = self
-        menu.addItem(restartItem)
 
         // Quit
         let quitItem = NSMenuItem(title: "Quit TextEnhancer", action: #selector(quitApp), keyEquivalent: "q")

@@ -255,4 +255,276 @@ final class ConfigurationManagerTests: XCTestCase {
         XCTAssertFalse(configManager.configuration.compression.enabled)
         XCTAssertEqual(configManager.configuration.compression.preset, .ultraHigh)
     }
+    
+    // MARK: - Debug Mode Configuration Tests
+    
+    func test_defaultDebugModeIsFalse() {
+        // Given: Default configuration
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        
+        // Then: Debug mode should default to false
+        XCTAssertFalse(configManager.configuration.debugModeEnabled)
+    }
+    
+    func test_debugModeBackwardCompatibility() {
+        // Given: Configuration JSON without debugModeEnabled property (existing config)
+        let configJson = """
+        {
+            "shortcuts": [],
+            "maxTokens": 1000,
+            "timeout": 30.0,
+            "showStatusIcon": true,
+            "enableNotifications": true,
+            "autoSave": true,
+            "logLevel": "info",
+            "apiProviders": {
+                "claude": {"apiKey": "", "model": "claude-4-sonnet", "enabled": true},
+                "openai": {"apiKey": "", "model": "gpt-4o", "enabled": false}
+            },
+            "compression": {"preset": "balanced", "enabled": true}
+        }
+        """
+        
+        let configData = configJson.data(using: .utf8)!
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
+        
+        // When: Loading configuration
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        
+        // Then: debugModeEnabled should default to false for backward compatibility
+        XCTAssertFalse(configManager.configuration.debugModeEnabled)
+    }
+    
+    func test_debugModeExplicitlySetToTrue() {
+        // Given: Configuration with debug mode explicitly enabled
+        let config = AppConfiguration(
+            shortcuts: [],
+            maxTokens: 1000,
+            timeout: 30.0,
+            showStatusIcon: true,
+            enableNotifications: true,
+            autoSave: true,
+            logLevel: "info",
+            apiProviders: APIProviders.default,
+            compression: CompressionConfiguration.default,
+            debugModeEnabled: true
+        )
+        
+        let configData = try! JSONEncoder().encode(config)
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
+        
+        // When: Loading configuration
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        
+        // Then: debugModeEnabled should be true
+        XCTAssertTrue(configManager.configuration.debugModeEnabled)
+    }
+    
+    func test_debugModeExplicitlySetToFalse() {
+        // Given: Configuration with debug mode explicitly disabled
+        let config = AppConfiguration(
+            shortcuts: [],
+            maxTokens: 1000,
+            timeout: 30.0,
+            showStatusIcon: true,
+            enableNotifications: true,
+            autoSave: true,
+            logLevel: "info",
+            apiProviders: APIProviders.default,
+            compression: CompressionConfiguration.default,
+            debugModeEnabled: false
+        )
+        
+        let configData = try! JSONEncoder().encode(config)
+        try! tempDir.createAppSupportDirectory()
+        try! configData.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))
+        
+        // When: Loading configuration
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        
+        // Then: debugModeEnabled should be false
+        XCTAssertFalse(configManager.configuration.debugModeEnabled)
+    }
+    
+    func test_updateDebugModeToTrue() {
+        // Given: Configuration manager with debug mode disabled
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        XCTAssertFalse(configManager.configuration.debugModeEnabled)
+        
+        // When: Updating debug mode to true
+        configManager.updateDebugMode(true)
+        
+        // Wait for async configuration update
+        let expectation = expectation(description: "Configuration update")
+        DispatchQueue.main.async {
+            expectation.fulfill()
+        }
+        waitForExpectations(timeout: 1.0)
+        
+        // Then: Debug mode should be enabled and persisted
+        XCTAssertTrue(configManager.configuration.debugModeEnabled)
+        
+        // Verify persistence by creating new manager
+        let newConfigManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        XCTAssertTrue(newConfigManager.configuration.debugModeEnabled)
+    }
+    
+    func test_updateDebugModeToFalse() {
+        // Given: Configuration manager with debug mode enabled
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        configManager.updateDebugMode(true)
+        
+        // Wait for initial update
+        let initialExpectation = expectation(description: "Initial update")
+        DispatchQueue.main.async {
+            initialExpectation.fulfill()
+        }
+        waitForExpectations(timeout: 1.0)
+        
+        XCTAssertTrue(configManager.configuration.debugModeEnabled)
+        
+        // When: Updating debug mode to false
+        configManager.updateDebugMode(false)
+        
+        // Wait for async update
+        let expectation = expectation(description: "Configuration update")
+        DispatchQueue.main.async {
+            expectation.fulfill()
+        }
+        waitForExpectations(timeout: 1.0)
+        
+        // Then: Debug mode should be disabled and persisted
+        XCTAssertFalse(configManager.configuration.debugModeEnabled)
+        
+        // Verify persistence by creating new manager
+        let newConfigManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        XCTAssertFalse(newConfigManager.configuration.debugModeEnabled)
+    }
+    
+    func test_updateDebugModePreservesOtherSettings() {
+        // Given: Configuration manager with specific settings
+        let originalConfig = AppConfiguration(
+            shortcuts: [
+                ShortcutConfiguration(
+                    id: "test-shortcut",
+                    name: "Test Shortcut",
+                    keyCode: 19,
+                    modifiers: [.command],
+                    prompt: "Test prompt",
+                    provider: .claude,
+                    model: "claude-4-opus",
+                    includeScreenshot: true
+                )
+            ],
+            maxTokens: 2000,
+            timeout: 60.0,
+            showStatusIcon: false,
+            enableNotifications: false,
+            autoSave: false,
+            logLevel: "debug",
+            apiProviders: APIProviders(
+                claude: APIProviderConfig(apiKey: "test-key", model: "claude-4-sonnet", enabled: true),
+                openai: APIProviderConfig(apiKey: "openai-key", model: "gpt-4o", enabled: true)
+            ),
+            compression: CompressionConfiguration(preset: .efficient, enabled: false),
+            debugModeEnabled: false
+        )
+        
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        configManager.saveConfiguration(originalConfig)
+        
+        // Wait for initial save
+        let initialExpectation = expectation(description: "Initial save")
+        DispatchQueue.main.async {
+            initialExpectation.fulfill()
+        }
+        waitForExpectations(timeout: 1.0)
+        
+        // When: Updating debug mode
+        configManager.updateDebugMode(true)
+        
+        // Wait for update
+        let updateExpectation = expectation(description: "Debug mode update")
+        DispatchQueue.main.async {
+            updateExpectation.fulfill()
+        }
+        waitForExpectations(timeout: 1.0)
+        
+        // Then: Debug mode should be updated while preserving all other settings
+        let updatedConfig = configManager.configuration
+        XCTAssertTrue(updatedConfig.debugModeEnabled)
+        
+        // Verify all other settings are preserved
+        XCTAssertEqual(updatedConfig.shortcuts.count, 1)
+        XCTAssertEqual(updatedConfig.shortcuts.first?.name, "Test Shortcut")
+        XCTAssertEqual(updatedConfig.shortcuts.first?.keyCode, 19)
+        XCTAssertEqual(updatedConfig.shortcuts.first?.modifiers, [.command])
+        XCTAssertEqual(updatedConfig.shortcuts.first?.prompt, "Test prompt")
+        XCTAssertEqual(updatedConfig.shortcuts.first?.provider, .claude)
+        XCTAssertEqual(updatedConfig.shortcuts.first?.model, "claude-4-opus")
+        XCTAssertTrue(updatedConfig.shortcuts.first?.effectiveIncludeScreenshot == true)
+        
+        XCTAssertEqual(updatedConfig.maxTokens, 2000)
+        XCTAssertEqual(updatedConfig.timeout, 60.0)
+        XCTAssertFalse(updatedConfig.showStatusIcon)
+        XCTAssertFalse(updatedConfig.enableNotifications)
+        XCTAssertFalse(updatedConfig.autoSave)
+        XCTAssertEqual(updatedConfig.logLevel, "debug")
+        
+        XCTAssertEqual(updatedConfig.apiProviders.claude.apiKey, "test-key")
+        XCTAssertEqual(updatedConfig.apiProviders.claude.model, "claude-4-sonnet")
+        XCTAssertTrue(updatedConfig.apiProviders.claude.enabled)
+        XCTAssertEqual(updatedConfig.apiProviders.openai.apiKey, "openai-key")
+        XCTAssertEqual(updatedConfig.apiProviders.openai.model, "gpt-4o")
+        XCTAssertTrue(updatedConfig.apiProviders.openai.enabled)
+        
+        XCTAssertEqual(updatedConfig.compression.preset, .efficient)
+        XCTAssertFalse(updatedConfig.compression.enabled)
+    }
+    
+    func test_debugModeEncodingDecoding() {
+        // Given: Configuration with debug mode enabled
+        let config = AppConfiguration(
+            shortcuts: [],
+            maxTokens: 1000,
+            timeout: 30.0,
+            showStatusIcon: true,
+            enableNotifications: true,
+            autoSave: true,
+            logLevel: "info",
+            apiProviders: APIProviders.default,
+            compression: CompressionConfiguration.default,
+            debugModeEnabled: true
+        )
+        
+        // When: Encoding and decoding
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        
+        let encodedData = try! encoder.encode(config)
+        let decodedConfig = try! decoder.decode(AppConfiguration.self, from: encodedData)
+        
+        // Then: Debug mode should be preserved
+        XCTAssertTrue(decodedConfig.debugModeEnabled)
+    }
 } 

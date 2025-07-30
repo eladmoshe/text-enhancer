@@ -172,4 +172,133 @@ class MenuBarManagerTests: XCTestCase {
         // Test that notification settings are respected (should be disabled in test)
         XCTAssertFalse(configManager.configuration.enableNotifications, "Notifications should be disabled in test configuration")
     }
+    
+    // MARK: - Debug Mode Configuration Tests
+    
+    func testDebugModeDefaultConfiguration() {
+        // Test that debug mode is disabled by default
+        XCTAssertFalse(configManager.configuration.debugModeEnabled, "Debug mode should be disabled by default")
+    }
+    
+    func testDebugModeEnabledConfiguration() {
+        // Given: Configuration with debug mode enabled
+        let debugConfig = AppConfiguration(
+            shortcuts: configManager.configuration.shortcuts,
+            maxTokens: configManager.configuration.maxTokens,
+            timeout: configManager.configuration.timeout,
+            showStatusIcon: configManager.configuration.showStatusIcon,
+            enableNotifications: configManager.configuration.enableNotifications,
+            autoSave: configManager.configuration.autoSave,
+            logLevel: configManager.configuration.logLevel,
+            apiProviders: configManager.configuration.apiProviders,
+            compression: configManager.configuration.compression,
+            debugModeEnabled: true
+        )
+        
+        // When: Setting configuration
+        configManager.configuration = debugConfig
+        
+        // Then: Debug mode should be enabled
+        XCTAssertTrue(configManager.configuration.debugModeEnabled, "Debug mode should be enabled when set to true")
+    }
+    
+    func testDebugModeDisabledConfiguration() {
+        // Given: Configuration with debug mode explicitly disabled
+        let debugConfig = AppConfiguration(
+            shortcuts: configManager.configuration.shortcuts,
+            maxTokens: configManager.configuration.maxTokens,
+            timeout: configManager.configuration.timeout,
+            showStatusIcon: configManager.configuration.showStatusIcon,
+            enableNotifications: configManager.configuration.enableNotifications,
+            autoSave: configManager.configuration.autoSave,
+            logLevel: configManager.configuration.logLevel,
+            apiProviders: configManager.configuration.apiProviders,
+            compression: configManager.configuration.compression,
+            debugModeEnabled: false
+        )
+        
+        // When: Setting configuration
+        configManager.configuration = debugConfig
+        
+        // Then: Debug mode should be disabled
+        XCTAssertFalse(configManager.configuration.debugModeEnabled, "Debug mode should be disabled when set to false")
+    }
+    
+    func testConfigurationChangeNotification() {
+        // Given: Initial configuration
+        let initialDebugState = configManager.configuration.debugModeEnabled
+        
+        // Setup notification observer
+        let expectation = expectation(description: "Configuration change notification")
+        let observer = NotificationCenter.default.addObserver(
+            forName: .configurationChanged,
+            object: nil,
+            queue: .main
+        ) { _ in
+            expectation.fulfill()
+        }
+        
+        // When: Updating debug mode
+        configManager.updateDebugMode(!initialDebugState)
+        
+        // Then: Should receive notification
+        waitForExpectations(timeout: 1.0)
+        
+        // Verify configuration changed
+        XCTAssertEqual(configManager.configuration.debugModeEnabled, !initialDebugState,
+                       "Debug mode should be toggled")
+        
+        NotificationCenter.default.removeObserver(observer)
+    }
+    
+    func testMenuBarManagerConfigurationAccess() {
+        // Test that MenuBarManager can access debug mode configuration
+        
+        // Given: Configuration with debug mode enabled
+        let debugConfig = AppConfiguration(
+            shortcuts: configManager.configuration.shortcuts,
+            maxTokens: configManager.configuration.maxTokens,
+            timeout: configManager.configuration.timeout,
+            showStatusIcon: configManager.configuration.showStatusIcon,
+            enableNotifications: configManager.configuration.enableNotifications,
+            autoSave: configManager.configuration.autoSave,
+            logLevel: configManager.configuration.logLevel,
+            apiProviders: configManager.configuration.apiProviders,
+            compression: configManager.configuration.compression,
+            debugModeEnabled: true
+        )
+        configManager.configuration = debugConfig
+        
+        // Then: MenuBarManager should be able to access the debug mode setting
+        // This tests the integration without needing to create actual UI components
+        XCTAssertTrue(configManager.configuration.debugModeEnabled,
+                      "MenuBarManager should be able to access debug mode setting via configManager")
+    }
+    
+    func testMenuBarManagerConfigurationUpdateResponse() {
+        // Test that MenuBarManager responds to configuration updates
+        
+        // Given: Initial configuration with debug mode disabled
+        XCTAssertFalse(configManager.configuration.debugModeEnabled)
+        
+        // Setup notification expectation 
+        let expectation = expectation(description: "Configuration change notification")
+        let observer = NotificationCenter.default.addObserver(
+            forName: .configurationChanged,
+            object: nil,
+            queue: .main
+        ) { _ in
+            expectation.fulfill()
+        }
+        
+        // When: Enabling debug mode
+        configManager.updateDebugMode(true)
+        
+        // Then: Should receive notification and configuration should be updated
+        waitForExpectations(timeout: 1.0)
+        XCTAssertTrue(configManager.configuration.debugModeEnabled,
+                      "Configuration should be updated after debug mode change")
+        
+        NotificationCenter.default.removeObserver(observer)
+    }
 } 

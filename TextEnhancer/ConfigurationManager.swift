@@ -69,6 +69,22 @@ class ConfigurationManager: ObservableObject {
     }
 
     // MARK: - Configuration Operations
+    
+    func updateDebugMode(_ enabled: Bool) {
+        let updatedConfig = AppConfiguration(
+            shortcuts: configuration.shortcuts,
+            maxTokens: configuration.maxTokens,
+            timeout: configuration.timeout,
+            showStatusIcon: configuration.showStatusIcon,
+            enableNotifications: configuration.enableNotifications,
+            autoSave: configuration.autoSave,
+            logLevel: configuration.logLevel,
+            apiProviders: configuration.apiProviders,
+            compression: configuration.compression,
+            debugModeEnabled: enabled
+        )
+        saveConfiguration(updatedConfig)
+    }
 
     // MARK: - Configuration File Operations
 
@@ -149,6 +165,29 @@ struct AppConfiguration: Codable {
     let logLevel: String
     let apiProviders: APIProviders
     let compression: CompressionConfiguration
+    private let _debugModeEnabled: Bool?
+    
+    var debugModeEnabled: Bool {
+        _debugModeEnabled ?? false
+    }
+    
+    init(shortcuts: [ShortcutConfiguration], maxTokens: Int, timeout: TimeInterval, showStatusIcon: Bool, enableNotifications: Bool, autoSave: Bool, logLevel: String, apiProviders: APIProviders, compression: CompressionConfiguration, debugModeEnabled: Bool = false) {
+        self.shortcuts = shortcuts
+        self.maxTokens = maxTokens
+        self.timeout = timeout
+        self.showStatusIcon = showStatusIcon
+        self.enableNotifications = enableNotifications
+        self.autoSave = autoSave
+        self.logLevel = logLevel
+        self.apiProviders = apiProviders
+        self.compression = compression
+        self._debugModeEnabled = debugModeEnabled
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case shortcuts, maxTokens, timeout, showStatusIcon, enableNotifications, autoSave, logLevel, apiProviders, compression
+        case _debugModeEnabled = "debugModeEnabled"
+    }
 
     static let `default` = AppConfiguration(
         shortcuts: [
@@ -197,7 +236,7 @@ struct AppConfiguration: Codable {
                 name: "Analyze Screen (OpenAI)",
                 keyCode: 24, // Key "7"
                 modifiers: [.control, .option],
-                prompt: "Analyze this screenshot and provide detailed insights about what you see. Focus on technical aspects, UI elements, and actionable observations.",
+                prompt: "Analyze this screenshot and provide detailed insights about you see. Focus on technical aspects, UI elements, and actionable observations.",
                 provider: .openai,
                 model: "gpt-4o",
                 includeScreenshot: true
@@ -210,7 +249,8 @@ struct AppConfiguration: Codable {
         autoSave: true,
         logLevel: "info",
         apiProviders: APIProviders.default,
-        compression: CompressionConfiguration.default
+        compression: CompressionConfiguration.default,
+        debugModeEnabled: false
     )
 }
 

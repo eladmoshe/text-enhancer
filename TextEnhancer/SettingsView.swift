@@ -65,6 +65,7 @@ struct SettingsView: View {
     @State private var apiProvidersExpanded: Bool = false
     @State private var compressionExpanded: Bool = false
     @State private var generalSettingsExpanded: Bool = false
+    @State private var debugModeEnabled: Bool
     
     // Shared cache manager instance
     private let cacheManager = ModelCacheManager()
@@ -85,6 +86,7 @@ struct SettingsView: View {
         self._compressionPreset = State(initialValue: config.compression.preset)
         self._isClaudeKeyLocked = State(initialValue: !config.apiProviders.claude.apiKey.isEmpty)
         self._isOpenaiKeyLocked = State(initialValue: !config.apiProviders.openai.apiKey.isEmpty)
+        self._debugModeEnabled = State(initialValue: config.debugModeEnabled)
     }
     
     var body: some View {
@@ -389,6 +391,11 @@ struct SettingsView: View {
                             Toggle("Enable Notifications", isOn: $enableNotifications)
                                 .font(.subheadline)
                                 .onChange(of: enableNotifications) { saveConfiguration() }
+                            Toggle("Debug Mode", isOn: $debugModeEnabled)
+                                .font(.subheadline)
+                                .onChange(of: debugModeEnabled) { 
+                                    configManager.updateDebugMode(debugModeEnabled)
+                                }
                         }
                         .padding(.vertical, 4)
                     }
