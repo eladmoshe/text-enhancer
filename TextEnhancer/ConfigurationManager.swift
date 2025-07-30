@@ -148,6 +148,7 @@ struct AppConfiguration: Codable {
     let autoSave: Bool
     let logLevel: String
     let apiProviders: APIProviders
+    let compression: CompressionConfiguration
 
     static let `default` = AppConfiguration(
         shortcuts: [
@@ -159,8 +160,48 @@ struct AppConfiguration: Codable {
                 prompt: "Improve the writing quality and clarity of this text while maintaining its original meaning and tone.",
                 provider: .claude,
                 model: "claude-sonnet-4-20250514",
+                includeScreenshot: false
+            ),
+            ShortcutConfiguration(
+                id: "summarize",
+                name: "Summarize",
+                keyCode: 21, // Key "4"
+                modifiers: [.control, .option],
+                prompt: "Provide a concise summary of this text, highlighting the main points.",
+                provider: .claude,
+                model: "claude-sonnet-4-20250514",
+                includeScreenshot: false
+            ),
+            ShortcutConfiguration(
+                id: "expand",
+                name: "Expand",
+                keyCode: 23, // Key "5"
+                modifiers: [.control, .option],
+                prompt: "Expand this text with more details, examples, and explanations while maintaining clarity.",
+                provider: .claude,
+                model: "claude-sonnet-4-20250514",
                 includeScreenshot: nil
             ),
+            ShortcutConfiguration(
+                id: "describe-screen",
+                name: "Describe Screen",
+                keyCode: 22, // Key "6"
+                modifiers: [.control, .option],
+                prompt: "Describe what you see in this screenshot. If there is no screenshot attached report an error and let me know. Explain what is happening on the screen, what applications are open, what content is visible, and any notable elements or activities.",
+                provider: .claude,
+                model: "claude-sonnet-4-20250514",
+                includeScreenshot: true
+            ),
+            ShortcutConfiguration(
+                id: "analyze-screen-openai",
+                name: "Analyze Screen (OpenAI)",
+                keyCode: 24, // Key "7"
+                modifiers: [.control, .option],
+                prompt: "Analyze this screenshot and provide detailed insights about what you see. Focus on technical aspects, UI elements, and actionable observations.",
+                provider: .openai,
+                model: "gpt-4o",
+                includeScreenshot: true
+            )
         ],
         maxTokens: 1000,
         timeout: 30.0,
@@ -168,7 +209,8 @@ struct AppConfiguration: Codable {
         enableNotifications: true,
         autoSave: true,
         logLevel: "info",
-        apiProviders: APIProviders.default
+        apiProviders: APIProviders.default,
+        compression: CompressionConfiguration.default
     )
 }
 

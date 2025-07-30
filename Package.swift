@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "TextEnhancer",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v14)
     ],
     products: [
         .executable(name: "TextEnhancer", targets: ["TextEnhancer"])
@@ -18,7 +18,7 @@ let package = Package(
         .executableTarget(
             name: "TextEnhancer",
             dependencies: [],
-            path: "Sources",
+            path: "TextEnhancer",
             resources: [
                 .copy("../config.default.json")
             ],

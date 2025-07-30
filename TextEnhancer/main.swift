@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Version Management
 
 enum AppVersion {
-    static let buildNumber: Int = 1015
+    static let buildNumber: Int = 1016
     static let version: String = "1.0.3"
     static let fullVersion: String = "\(version) (build \(buildNumber))"
 }

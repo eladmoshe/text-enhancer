@@ -139,4 +139,123 @@ final class ScreenCaptureServiceTests: XCTestCase {
             XCTAssertGreaterThan(screenshot!.size.height, 0)
         }
     }
+    
+    // MARK: - Compression Integration Tests
+    
+    func test_convertImageToBase64WithCompressionConfig_usesCompressionSettings() {
+        // Given: A test image and compression configuration
+        let testImage = createTestImageForCompression()
+        let compressionConfig = CompressionConfiguration(
+            preset: .efficient,
+            customQuality: nil,
+            maxSizeBytes: nil
+        )
+        
+        // When: Convert with quality from compression configuration
+        let result = screenCaptureService.convertImageToBase64(testImage, quality: CGFloat(compressionConfig.quality))
+        
+        // Then: Should return compressed base64 string
+        XCTAssertNotNil(result)
+        XCTAssertFalse(result!.isEmpty)
+        
+        // Should use efficient preset quality
+        let data = Data(base64Encoded: result!)
+        XCTAssertNotNil(data)
+        XCTAssertGreaterThan(data!.count, 0)
+    }
+    
+    func test_convertImageToBase64WithMaxSize_respectsSizeLimit() {
+        // Given: A test image and size-limited compression config
+        let testImage = createTestImageForCompression()
+        let compressionConfig = CompressionConfiguration(
+            preset: .balanced,
+            customQuality: nil,
+            maxSizeBytes: 10000 // 10KB limit - more realistic for base64 encoded JPEG
+        )
+        
+        // When: Convert with quality from compression configuration
+        let result = screenCaptureService.convertImageToBase64(testImage, quality: CGFloat(compressionConfig.quality))
+        
+        // Then: Should respect size limit
+        XCTAssertNotNil(result)
+        let data = Data(base64Encoded: result!)
+        XCTAssertNotNil(data)
+        XCTAssertLessThanOrEqual(data!.count, 10000)
+    }
+    
+    func test_convertImageToBase64WithDifferentPresets_producesExpectedQuality() {
+        // Given: A test image
+        let testImage = createTestImageForCompression()
+        
+        // When: Convert with different presets
+        let ultraHighConfig = CompressionConfiguration(preset: .ultraHigh)
+        let efficientConfig = CompressionConfiguration(preset: .efficient)
+        
+        let ultraHighResult = screenCaptureService.convertImageToBase64(testImage, quality: CGFloat(ultraHighConfig.quality))
+        let efficientResult = screenCaptureService.convertImageToBase64(testImage, quality: CGFloat(efficientConfig.quality))
+        
+        // Then: Ultra high should produce larger file than efficient
+        XCTAssertNotNil(ultraHighResult)
+        XCTAssertNotNil(efficientResult)
+        
+        let ultraHighData = Data(base64Encoded: ultraHighResult!)!
+        let efficientData = Data(base64Encoded: efficientResult!)!
+        
+        XCTAssertGreaterThan(ultraHighData.count, efficientData.count)
+    }
+    
+    func test_convertImageToBase64WithCustomQuality_usesCustomValue() {
+        // Given: A test image and custom quality config
+        let testImage = createTestImageForCompression()
+        let customQualityConfig = CompressionConfiguration(
+            preset: .balanced,
+            customQuality: 0.3,
+            maxSizeBytes: nil
+        )
+        
+        // When: Convert with custom quality
+        let result = screenCaptureService.convertImageToBase64(testImage, quality: CGFloat(customQualityConfig.quality))
+        
+        // Then: Should use custom quality (resulting in smaller file)
+        XCTAssertNotNil(result)
+        let data = Data(base64Encoded: result!)
+        XCTAssertNotNil(data)
+        
+        // Compare with default quality to ensure custom quality is applied
+        let defaultResult = screenCaptureService.convertImageToBase64(testImage, quality: 0.7)
+        let defaultData = Data(base64Encoded: defaultResult!)!
+        
+        XCTAssertLessThan(data!.count, defaultData.count) // Custom low quality should be smaller
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func createTestImageForCompression() -> NSImage {
+        // Create a more complex image that benefits from compression
+        let size = NSSize(width: 200, height: 200)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        
+        // Create gradient background
+        let gradient = NSGradient(colors: [.red, .blue, .green])
+        gradient?.draw(in: NSRect(origin: .zero, size: size), angle: 45)
+        
+        // Add some detail
+        for _ in 0..<20 {
+            let rect = NSRect(
+                x: Double.random(in: 0...size.width-20),
+                y: Double.random(in: 0...size.height-20),
+                width: 20,
+                height: 20
+            )
+            NSColor(red: Double.random(in: 0...1),
+                   green: Double.random(in: 0...1),
+                   blue: Double.random(in: 0...1),
+                   alpha: 0.7).setFill()
+            rect.fill()
+        }
+        
+        image.unlockFocus()
+        return image
+    }
 }

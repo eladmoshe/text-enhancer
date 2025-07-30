@@ -82,5 +82,11 @@
     }
   ],
   "autoSave": true,
-  "logLevel": "info"
+  "logLevel": "info",
+  "compression": {
+    "preset": "balanced",
+    "enabled": true,
+    "customQuality": null,
+    "maxSizeBytes": null
+  }
 }

@@ -71,7 +71,8 @@ final class ConfigurationManagerDefaultConfigTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "test-claude-key", model: "claude-test", enabled: false),
                 openai: APIProviderConfig(apiKey: "test-openai-key", model: "gpt-test", enabled: true)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         // Save the custom config to the temp directory

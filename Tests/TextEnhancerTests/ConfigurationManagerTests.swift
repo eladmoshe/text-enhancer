@@ -56,7 +56,8 @@ final class ConfigurationManagerTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "test-api-key", model: "claude-4-sonnet", enabled: true),
                 openai: APIProviderConfig(apiKey: "", model: "gpt-4o", enabled: false)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         let configData = try! JSONEncoder().encode(config)
@@ -100,7 +101,8 @@ final class ConfigurationManagerTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "modified-key", model: "claude-4-sonnet", enabled: true),
                 openai: APIProviderConfig(apiKey: "", model: "gpt-4o", enabled: false)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         configManager.saveConfiguration(modifiedConfig)
@@ -132,7 +134,8 @@ final class ConfigurationManagerTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "app-support-key", model: "claude-4-sonnet", enabled: true),
                 openai: APIProviderConfig(apiKey: "", model: "gpt-4o", enabled: false)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         let configData = try! JSONEncoder().encode(config)
@@ -160,5 +163,96 @@ final class ConfigurationManagerTests: XCTestCase {
         XCTAssertEqual(configManager.configuration.maxTokens, 1000)
         XCTAssertEqual(configManager.configuration.shortcuts.count, 1)
         XCTAssertEqual(configManager.configuration.shortcuts.first?.model, "claude-sonnet-4-20250514")
+    }
+    
+    // MARK: - Compression Configuration Tests
+    
+    func test_defaultCompressionConfiguration() {
+        // Given: Default configuration
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        
+        // Then: Should have default compression settings
+        XCTAssertNotNil(configManager.configuration.compression)
+        XCTAssertEqual(configManager.configuration.compression.preset, .balanced)
+        XCTAssertTrue(configManager.configuration.compression.enabled)
+        XCTAssertNil(configManager.configuration.compression.customQuality)
+        XCTAssertNil(configManager.configuration.compression.maxSizeBytes)
+    }
+    
+    func test_compressionConfigurationPersistence() throws {
+        // Given: Configuration with custom compression settings
+        let customCompression = CompressionConfiguration(
+            preset: .efficient,
+            enabled: true,
+            customQuality: 0.8,
+            maxSizeBytes: 50000
+        )
+        
+        let config = AppConfiguration(
+            shortcuts: [],
+            maxTokens: 1000,
+            timeout: 30.0,
+            showStatusIcon: true,
+            enableNotifications: true,
+            autoSave: true,
+            logLevel: "info",
+            apiProviders: APIProviders.default,
+            compression: customCompression
+        )
+        
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        
+        // When: Save and reload configuration
+        configManager.saveConfiguration(config)
+        
+        let newConfigManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        
+        // Then: Compression settings should persist
+        XCTAssertEqual(newConfigManager.configuration.compression.preset, .efficient)
+        XCTAssertTrue(newConfigManager.configuration.compression.enabled)
+        XCTAssertEqual(newConfigManager.configuration.compression.customQuality, 0.8)
+        XCTAssertEqual(newConfigManager.configuration.compression.maxSizeBytes, 50000)
+    }
+    
+    func test_compressionConfigurationWithDisabledCompression() {
+        // Given: Configuration with compression disabled
+        let disabledCompression = CompressionConfiguration(
+            preset: .ultraHigh,
+            enabled: false
+        )
+        
+        let config = AppConfiguration(
+            shortcuts: [],
+            maxTokens: 1000,
+            timeout: 30.0,
+            showStatusIcon: true,
+            enableNotifications: true,
+            autoSave: true,
+            logLevel: "info",
+            apiProviders: APIProviders.default,
+            compression: disabledCompression
+        )
+        
+        let configManager = ConfigurationManager(
+            appSupportDir: tempDir.appSupportDirectory()
+        )
+        configManager.saveConfiguration(config)
+        
+        // Wait for async configuration update
+        let expectation = expectation(description: "Configuration update")
+        DispatchQueue.main.async {
+            expectation.fulfill()
+        }
+        waitForExpectations(timeout: 1.0)
+        
+        // Then: Should preserve disabled state
+        XCTAssertFalse(configManager.configuration.compression.enabled)
+        XCTAssertEqual(configManager.configuration.compression.preset, .ultraHigh)
     }
 } 

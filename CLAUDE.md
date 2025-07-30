@@ -34,3 +34,6 @@ For rapid iteration: `./quick-dev.sh`
 1. Reset: `sudo tccutil reset Accessibility`
 2. Rebuild: `./build-and-install.sh`
 3. Follow permission setup in script output
+
+### System Requirements
+- this project only supports MacOS 15.5 or later

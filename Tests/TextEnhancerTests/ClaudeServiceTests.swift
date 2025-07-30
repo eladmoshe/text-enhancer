@@ -40,7 +40,8 @@ final class ClaudeServiceTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: apiKey, model: "claude-4-sonnet", enabled: true),
                 openai: APIProviderConfig(apiKey: "", model: "gpt-4o", enabled: false)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         let configData = try! JSONEncoder().encode(config)
@@ -290,7 +291,8 @@ final class ClaudeServiceTests: XCTestCase {
             enableNotifications: currentConfig.enableNotifications,
             autoSave: currentConfig.autoSave,
             logLevel: currentConfig.logLevel,
-            apiProviders: modifiedApiProviders
+            apiProviders: modifiedApiProviders,
+            compression: configManager.configuration.compression
         )
         configManager.configuration = emptyKeyConfig
         

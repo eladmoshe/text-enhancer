@@ -40,7 +40,8 @@ final class OpenAIServiceTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "", model: "claude-3-haiku-20240307", enabled: false),
                 openai: APIProviderConfig(apiKey: apiKey, model: "gpt-3.5-turbo", enabled: true)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         let configData = try! JSONEncoder().encode(config)
@@ -264,7 +265,8 @@ final class OpenAIServiceTests: XCTestCase {
             enableNotifications: currentConfig.enableNotifications,
             autoSave: currentConfig.autoSave,
             logLevel: currentConfig.logLevel,
-            apiProviders: modifiedApiProviders
+            apiProviders: modifiedApiProviders,
+            compression: configManager.configuration.compression
         )
         configManager.configuration = emptyKeyConfig
         

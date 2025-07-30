@@ -76,7 +76,8 @@ class SettingsViewTests: XCTestCase {
                     model: "gpt-4o",
                     enabled: true
                 )
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         configManager.configuration = customConfig
@@ -189,7 +190,8 @@ class SettingsViewTests: XCTestCase {
                     model: "gpt-4o",
                     enabled: true
                 )
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         configManager.configuration = emptyConfig
@@ -218,7 +220,8 @@ class SettingsViewTests: XCTestCase {
                     model: "gpt-4o",
                     enabled: true
                 )
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         configManager.configuration = configWithKeys

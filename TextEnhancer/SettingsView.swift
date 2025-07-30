@@ -56,11 +56,14 @@ struct SettingsView: View {
     @State private var openaiApiKey: String
     @State private var claudeEnabled: Bool
     @State private var openaiEnabled: Bool
+    @State private var compressionEnabled: Bool
+    @State private var compressionPreset: CompressionPreset
     @State private var isTestingInProgress: Bool = false
     @State private var isClaudeKeyLocked: Bool = false
     @State private var isOpenaiKeyLocked: Bool = false
     @State private var shortcutsExpanded: Bool = true
     @State private var apiProvidersExpanded: Bool = false
+    @State private var compressionExpanded: Bool = false
     @State private var generalSettingsExpanded: Bool = false
     
     // Shared cache manager instance
@@ -78,6 +81,8 @@ struct SettingsView: View {
         self._openaiApiKey = State(initialValue: config.apiProviders.openai.apiKey)
         self._claudeEnabled = State(initialValue: config.apiProviders.claude.enabled)
         self._openaiEnabled = State(initialValue: config.apiProviders.openai.enabled)
+        self._compressionEnabled = State(initialValue: config.compression.enabled)
+        self._compressionPreset = State(initialValue: config.compression.preset)
         self._isClaudeKeyLocked = State(initialValue: !config.apiProviders.claude.apiKey.isEmpty)
         self._isOpenaiKeyLocked = State(initialValue: !config.apiProviders.openai.apiKey.isEmpty)
     }
@@ -266,6 +271,85 @@ struct SettingsView: View {
                         .padding(.vertical, 4)
                     }
                     
+                    // Screenshot Compression Section
+                    CollapsibleSection(
+                        title: "Screenshot Compression",
+                        isExpanded: $compressionExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Enable/Disable Compression Toggle
+                            HStack {
+                                Text("Enable Compression:")
+                                    .frame(width: 150, alignment: .leading)
+                                Toggle("", isOn: $compressionEnabled)
+                                    .toggleStyle(SwitchToggleStyle())
+                                    .onChange(of: compressionEnabled) {
+                                        saveConfiguration()
+                                    }
+                                Spacer()
+                            }
+                            
+                            if compressionEnabled {
+                                // Compression Preset Selector
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Compression Level:")
+                                        .font(.headline)
+                                    
+                                    ForEach(CompressionPreset.allCases, id: \.self) { preset in
+                                        HStack {
+                                            Button(action: {
+                                                compressionPreset = preset
+                                                saveConfiguration()
+                                            }) {
+                                                HStack {
+                                                    Image(systemName: compressionPreset == preset ? "largecircle.fill.circle" : "circle")
+                                                        .foregroundColor(compressionPreset == preset ? .accentColor : .secondary)
+                                                    
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(preset.displayName)
+                                                            .font(.system(size: 14, weight: .medium))
+                                                            .foregroundColor(.primary)
+                                                        Text(preset.description)
+                                                            .font(.system(size: 12))
+                                                            .foregroundColor(.secondary)
+                                                            .multilineTextAlignment(.leading)
+                                                    }
+                                                    Spacer()
+                                                }
+                                                .padding(.vertical, 4)
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                        }
+                                    }
+                                }
+                                .padding(.top, 8)
+                                
+                                // Cost Impact Information
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("💡 Compression Benefits:")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Text("• Reduces API costs by sending smaller images")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                    Text("• Faster upload and processing times")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                    Text("• Maintains quality for AI analysis")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.top, 8)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(Color(.controlBackgroundColor).opacity(0.5))
+                                .cornerRadius(6)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    
                     // General Settings Section
                     CollapsibleSection(
                         title: "General Settings",
@@ -365,6 +449,10 @@ struct SettingsView: View {
                     model: "gpt-4o", // Default model for global config
                     enabled: openaiEnabled
                 )
+            ),
+            compression: CompressionConfiguration(
+                preset: compressionPreset,
+                enabled: compressionEnabled
             )
         )
         

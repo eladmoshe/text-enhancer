@@ -55,7 +55,8 @@ final class ShortcutManagerTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "test-key", model: "claude-3-haiku-20240307", enabled: true),
                 openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         let configData = try! JSONEncoder().encode(testConfig)
@@ -117,7 +118,8 @@ final class ShortcutManagerTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "test-key", model: "claude-3-haiku-20240307", enabled: true),
                 openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         let configData = try! JSONEncoder().encode(conflictingConfig)
@@ -149,7 +151,8 @@ final class ShortcutManagerTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "test-key", model: "claude-3-haiku-20240307", enabled: true),
                 openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         let configData = try! JSONEncoder().encode(emptyConfig)

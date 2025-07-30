@@ -33,7 +33,8 @@ final class ShortcutMenuControllerTests: XCTestCase {
             enableNotifications: false,
             autoSave: true,
             logLevel: "info",
-            apiProviders: APIProviders.default
+            apiProviders: APIProviders.default,
+            compression: CompressionConfiguration.default
         )
         let data = try JSONEncoder().encode(testConfig)
         try data.write(to: tempDir.appSupportDirectory().appendingPathComponent("config.json"))

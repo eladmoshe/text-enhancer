@@ -154,8 +154,9 @@ func createConfigManager(with tempDir: TemporaryDirectory) -> ConfigurationManag
         apiProviders: APIProviders(
             claude: APIProviderConfig(apiKey: "test-api-key", model: "claude-sonnet-4-20250514", enabled: true),
             openai: APIProviderConfig(apiKey: "test-openai-key", model: "gpt-4o", enabled: true)
+        ),
+            compression: CompressionConfiguration.default
         )
-    )
     
     let configData = try! JSONEncoder().encode(config)
     try! tempDir.createAppSupportDirectory()
@@ -210,7 +211,8 @@ final class TextProcessorTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "test-api-key", model: "claude-3-haiku-20240307", enabled: true),
                 openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         let configData = try! JSONEncoder().encode(config)
@@ -413,7 +415,8 @@ final class TextProcessorTests: XCTestCase {
             apiProviders: APIProviders(
                 claude: APIProviderConfig(apiKey: "", model: "claude-3-haiku-20240307", enabled: true),
                 openai: APIProviderConfig(apiKey: "", model: "gpt-3.5-turbo", enabled: false)
-            )
+            ),
+            compression: CompressionConfiguration.default
         )
         
         let configData = try! JSONEncoder().encode(configWithoutKey)
