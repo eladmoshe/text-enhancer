@@ -28,11 +28,11 @@ final class ClaudeServiceTests: XCTestCase {
         super.tearDown()
     }
     
-    func createConfigManager(with apiKey: String) -> ConfigurationManager {
+    func createConfigManager(with apiKey: String, maxTokens: Int = 1000, timeout: TimeInterval = 30.0) -> ConfigurationManager {
         let config = AppConfiguration(
             shortcuts: [],
-            maxTokens: 1000,
-            timeout: 30.0,
+            maxTokens: maxTokens,
+            timeout: timeout,
             showStatusIcon: true,
             enableNotifications: true,
             autoSave: true,
@@ -237,6 +237,20 @@ final class ClaudeServiceTests: XCTestCase {
         XCTAssertTrue(content.contains("Improve this"))
         XCTAssertTrue(content.contains("Hello world"))
         XCTAssertTrue(content.contains("Text to enhance:"))
+    }
+
+    func test_createRequest_usesConfiguredLimits() throws {
+        // Given: Claude service with custom request limits
+        configManager = createConfigManager(with: "test-api-key", maxTokens: 2048, timeout: 75.0)
+        let claudeService = ClaudeService(configManager: configManager, urlSession: mockURLSession)
+
+        // When: Create request
+        let request = try claudeService.createRequest(text: "Hello world", prompt: "Improve this", apiKey: "test-key", model: "claude-4-sonnet")
+
+        // Then: Should use configured values
+        let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
+        XCTAssertEqual(request.timeoutInterval, 75.0)
+        XCTAssertEqual(body["max_tokens"] as? Int, 2048)
     }
     
     func test_errorDescriptions() {
@@ -754,4 +768,4 @@ final class ClaudeServiceTests: XCTestCase {
             XCTFail("Expected enhanced error, got: \(error)")
         }
     }
-} 
+}

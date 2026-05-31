@@ -6,8 +6,13 @@ class OpenAIService: ObservableObject {
     private let cacheManager: ModelCacheManager
     private let apiURL = "https://api.openai.com/v1/chat/completions"
     private let modelsURL = "https://api.openai.com/v1/models"
-    private let maxTokens = 1000
-    private let timeout: TimeInterval = 30.0
+    private var maxTokens: Int {
+        max(1, configManager.configuration.maxTokens)
+    }
+
+    private var timeout: TimeInterval {
+        max(1.0, configManager.configuration.timeout)
+    }
 
     init(
         configManager: ConfigurationManager,
@@ -286,7 +291,7 @@ class OpenAIService: ObservableObject {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 30.0
+        request.timeoutInterval = timeout
         request.cachePolicy = .reloadIgnoringLocalCacheData
 
         let (data, response) = try await urlSession.data(for: request)

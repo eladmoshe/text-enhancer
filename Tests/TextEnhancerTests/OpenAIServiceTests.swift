@@ -28,11 +28,11 @@ final class OpenAIServiceTests: XCTestCase {
         super.tearDown()
     }
     
-    func createConfigManager(with apiKey: String) -> ConfigurationManager {
+    func createConfigManager(with apiKey: String, maxTokens: Int = 1000, timeout: TimeInterval = 30.0) -> ConfigurationManager {
         let config = AppConfiguration(
             shortcuts: [],
-            maxTokens: 1000,
-            timeout: 30.0,
+            maxTokens: maxTokens,
+            timeout: timeout,
             showStatusIcon: true,
             enableNotifications: true,
             autoSave: true,
@@ -228,6 +228,20 @@ final class OpenAIServiceTests: XCTestCase {
         XCTAssertTrue(requestBody.messages[0].content.contains("Test prompt"))
         XCTAssertTrue(requestBody.messages[0].content.contains("Test text"))
     }
+
+    func test_createRequest_usesConfiguredLimits() throws {
+        // Given: OpenAI service with custom request limits
+        configManager = createConfigManager(with: "test-api-key", maxTokens: 2048, timeout: 75.0)
+        let service = OpenAIService(configManager: configManager)
+
+        // When: Create request
+        let request = try service.createRequest(text: "Test text", prompt: "Test prompt", apiKey: "test-key", model: "gpt-4o")
+
+        // Then: Should use configured values
+        let requestBody = try JSONDecoder().decode(OpenAIRequest.self, from: request.httpBody!)
+        XCTAssertEqual(request.timeoutInterval, 75.0)
+        XCTAssertEqual(requestBody.max_tokens, 2048)
+    }
     
     // MARK: - Retry Tests
     
@@ -347,4 +361,4 @@ final class OpenAIServiceTests: XCTestCase {
             XCTFail("Should not have thrown an error: \(error)")
         }
     }
-} 
+}
