@@ -19,13 +19,22 @@ final class Logger {
 
         logFileURL = logsDir.appendingPathComponent("debug.log")
 
+        // Timestamp header for each session
+        let header = "\n=== TextEnhancer log started: \(Date()) ===\nVersion: \(AppVersion.fullVersion)\n"
+        if let data = header.data(using: .utf8),
+           let fileHandle = try? FileHandle(forWritingTo: logFileURL) {
+            do {
+                try fileHandle.seekToEnd()
+                try fileHandle.write(contentsOf: data)
+            } catch {
+                // Logging must never prevent the app from launching.
+            }
+            fileHandle.closeFile()
+        }
+
         // Redirect both stdout and stderr to the same log file (append-mode)
         let path = (logFileURL.path as NSString).fileSystemRepresentation
         freopen(path, "a+", stdout)
         freopen(path, "a+", stderr)
-
-        // Timestamp header for each session
-        let header = "\n=== TextEnhancer log started: \(Date()) ===\n"
-        fputs(header, stderr)
     }
 }

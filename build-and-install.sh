@@ -19,6 +19,7 @@ BUNDLE_ID="com.lemonadeinc.textenhancer.v2"
 INSTALL_PATH="/Applications/${APP_NAME}.app"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${PROJECT_DIR}/build"
+CODE_SIGN_ARGS=("CODE_SIGNING_ALLOWED=NO")
 
 echo -e "${BLUE}🚀 TextEnhancer Build & Install Script${NC}"
 echo -e "${YELLOW}⚠️  CRITICAL: This app requires accessibility permissions to function${NC}"
@@ -66,6 +67,7 @@ cd "${PROJECT_DIR}"
 xcodebuild -scheme "${APP_NAME}" \
            -configuration Release \
            -derivedDataPath "${BUILD_DIR}" \
+           "${CODE_SIGN_ARGS[@]}" \
            clean build \
            | grep -E "(error|warning|SUCCEEDED|FAILED)" || true
 
@@ -79,7 +81,8 @@ echo -e "${GREEN}   ✅ Build completed successfully${NC}"
 # Step 5: Verify code signing
 echo -e "${BLUE}5. Verifying code signing and bundle ID...${NC}"
 BUILT_APP="${BUILD_DIR}/Build/Products/Release/${APP_NAME}.app"
-ACTUAL_BUNDLE_ID=$(codesign -dv --verbose=4 "${BUILT_APP}" 2>&1 | grep "Identifier=" | cut -d'=' -f2)
+codesign --force --deep --sign - "${BUILT_APP}"
+ACTUAL_BUNDLE_ID=$(codesign -dv --verbose=4 "${BUILT_APP}" 2>&1 | grep "^Identifier=" | cut -d'=' -f2)
 
 if [ "$ACTUAL_BUNDLE_ID" != "$BUNDLE_ID" ]; then
     echo -e "${RED}❌ ERROR: Built app has wrong bundle ID: $ACTUAL_BUNDLE_ID (expected: $BUNDLE_ID)${NC}"
