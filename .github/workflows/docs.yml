@@ -4,13 +4,13 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'Sources/**'
+      - 'TextEnhancer/**'
       - 'docs/**'
       - '.github/workflows/docs.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'Sources/**'
+      - 'TextEnhancer/**'
       - 'docs/**'
       - '.github/workflows/docs.yml'
 
@@ -22,6 +22,9 @@ permissions:
 concurrency:
   group: "pages"
   cancel-in-progress: true
+
+env:
+  SOURCE_DIR: TextEnhancer
 
 jobs:
   # Generate Swift documentation
@@ -64,7 +67,7 @@ jobs:
         echo "" >> docs/generated/index.md
         
         # Find public classes, structs, and protocols
-        find Sources/ -name "*.swift" -exec grep -l "public\|open" {} \; | while read file; do
+        find "$SOURCE_DIR" -name "*.swift" -exec grep -l "public\|open" {} \; | while read file; do
           echo "Processing $file"
           basename=$(basename "$file" .swift)
           echo "- [$basename](sources/$basename.md)" >> docs/generated/index.md
@@ -85,7 +88,7 @@ jobs:
 
     - name: Upload Documentation Artifact
       if: github.ref == 'refs/heads/main'
-      uses: actions/upload-pages-artifact@v2
+      uses: actions/upload-pages-artifact@v4
       with:
         path: docs/
 
@@ -123,7 +126,7 @@ jobs:
         # Check for public APIs without documentation
         missing_docs=0
         
-        find Sources/ -name "*.swift" | while read file; do
+        find "$SOURCE_DIR" -name "*.swift" | while read file; do
           echo "Checking $file"
           
           # Look for public declarations that might need documentation
