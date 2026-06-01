@@ -28,9 +28,9 @@ final class ConfigurationManagerTests: XCTestCase {
         XCTAssertTrue(configManager.configuration.enableNotifications)
         XCTAssertTrue(configManager.configuration.autoSave)
         XCTAssertEqual(configManager.configuration.logLevel, "info")
-        XCTAssertEqual(configManager.configuration.shortcuts.count, 1)
-        XCTAssertEqual(configManager.configuration.shortcuts.first?.id, "improve-text")
-        XCTAssertEqual(configManager.configuration.shortcuts.first?.model, "claude-sonnet-4-20250514")
+        XCTAssertEqual(configManager.configuration.shortcuts.count, 5)
+        let improveTextShortcut = configManager.configuration.shortcuts.first { $0.id == "improve-text" }
+        XCTAssertEqual(improveTextShortcut?.model, "claude-sonnet-4-20250514")
     }
     
     func test_claudeApiKeyReturnsNilWhenEmpty() {
@@ -161,8 +161,9 @@ final class ConfigurationManagerTests: XCTestCase {
         // Then: Should fall back to default configuration
         XCTAssertEqual(configManager.configuration.apiProviders.claude.apiKey, "")
         XCTAssertEqual(configManager.configuration.maxTokens, 1000)
-        XCTAssertEqual(configManager.configuration.shortcuts.count, 1)
-        XCTAssertEqual(configManager.configuration.shortcuts.first?.model, "claude-sonnet-4-20250514")
+        XCTAssertEqual(configManager.configuration.shortcuts.count, 5)
+        let improveTextShortcut = configManager.configuration.shortcuts.first { $0.id == "improve-text" }
+        XCTAssertEqual(improveTextShortcut?.model, "claude-sonnet-4-20250514")
     }
     
     // MARK: - Compression Configuration Tests
@@ -527,4 +528,4 @@ final class ConfigurationManagerTests: XCTestCase {
         // Then: Debug mode should be preserved
         XCTAssertTrue(decodedConfig.debugModeEnabled)
     }
-} 
+}

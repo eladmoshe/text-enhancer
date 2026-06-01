@@ -352,6 +352,7 @@ class TextProcessor: ObservableObject {
     private let accessibilityChecker: AccessibilityChecker
     private let alertPresenter: AlertPresenter
     private let screenCaptureService: ScreenCaptureService
+    private let apiServiceFactory: (APIProvider, ConfigurationManager) -> APIProviderService?
 
     init(
         configManager: ConfigurationManager,
@@ -359,13 +360,15 @@ class TextProcessor: ObservableObject {
         textReplacer: TextReplacer? = nil,
         accessibilityChecker: AccessibilityChecker = DefaultAccessibilityChecker(),
         alertPresenter: AlertPresenter? = nil,
-        screenCaptureService: ScreenCaptureService = ScreenCaptureService()
+        screenCaptureService: ScreenCaptureService = ScreenCaptureService(),
+        apiServiceFactory: @escaping (APIProvider, ConfigurationManager) -> APIProviderService? = APIProviderFactory.createService
     ) {
         self.configManager = configManager
         self.textSelectionProvider = textSelectionProvider
         self.accessibilityChecker = accessibilityChecker
         self.alertPresenter = alertPresenter ?? DefaultAlertPresenter(configManager: configManager)
         self.screenCaptureService = screenCaptureService
+        self.apiServiceFactory = apiServiceFactory
 
         // Initialize text replacer with default pasteboard manager if not provided
         if let textReplacer {
@@ -466,18 +469,30 @@ class TextProcessor: ObservableObject {
 
                 if !recheck {
                     // Silently open System Settings to Accessibility panel
-                    print("🔐 TextProcessor: Opening System Settings for accessibility permissions")
-                    if let url =
-                        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
-                    {
-                        NSWorkspace.shared.open(url)
-                    }
-                    return
+                print("🔐 TextProcessor: Opening System Settings for accessibility permissions")
+                if !Self.isRunningTests,
+                   let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                    NSWorkspace.shared.open(url)
                 }
+                await alertPresenter.showError(
+                    title: "🔐 Accessibility Permission Required",
+                    message: """
+                    Accessibility permission is required to read and replace selected text.
+
+                    Fix: System Settings → Privacy & Security → Accessibility
+                    → Enable TextEnhancer
+                    """,
+                    actions: [
+                        .openSystemSettings(panel: "com.apple.preference.security?Privacy_Accessibility"),
+                        .ok(),
+                    ]
+                )
+                return
             }
+        }
 
             // Create appropriate API service
-            guard let apiService = APIProviderFactory.createService(for: provider, configManager: configManager) else {
+            guard let apiService = apiServiceFactory(provider, configManager) else {
                 await alertPresenter.showError(
                     title: "🔑 API Key Required",
                     message: """
@@ -509,7 +524,7 @@ class TextProcessor: ObservableObject {
 
                 // Also write to debug file
                 try? debugMsg.appendingFormat("\n").write(
-                    to: URL(fileURLWithPath: "/Users/elad.moshe/my-code/text-llm-modify/debug.log"),
+                    to: URL(fileURLWithPath: "/Users/elad.moshe/Library/Logs/TextEnhancer/debug.log"),
                     atomically: true,
                     encoding: .utf8
                 )
@@ -560,7 +575,7 @@ class TextProcessor: ObservableObject {
                     print("🔧 TextProcessor: Capturing screenshot for context")
                     let debugMsg = "About to capture screenshot for shortcut: \(shortcut.id) at \(Date())\n"
                     try? debugMsg.appendingFormat("").write(
-                        to: URL(fileURLWithPath: "/Users/elad.moshe/my-code/text-llm-modify/debug.log"),
+                        to: URL(fileURLWithPath: "/Users/elad.moshe/Library/Logs/TextEnhancer/debug.log"),
                         atomically: false,
                         encoding: .utf8
                     )
@@ -647,5 +662,16 @@ class TextProcessor: ObservableObject {
             processingTask.cancel()
             timeoutTask.cancel()
         }
+    }
+
+    private static var isRunningTests: Bool {
+        let processInfo = ProcessInfo.processInfo
+        let processName = processInfo.processName.lowercased()
+
+        return processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || processName.contains("xctest")
+            || processName.contains("packagetests")
+            || CommandLine.arguments.contains { $0.contains(".xctest") || $0.hasSuffix("/xctest") }
+            || Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
     }
 }

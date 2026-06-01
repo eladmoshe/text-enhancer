@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "TextEnhancer",
     platforms: [
-        .macOS(.v14)
+        .macOS("15.5")
     ],
     products: [
         .executable(name: "TextEnhancer", targets: ["TextEnhancer"])
@@ -32,4 +32,4 @@ let package = Package(
             path: "Tests/TextEnhancerTests"
         )
     ]
-) 
+)

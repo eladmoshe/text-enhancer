@@ -754,7 +754,8 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
 
     private func requestNotificationPermissions() {
         // Check if we're running in a proper app bundle and not from swift run
-        guard Bundle.main.bundleIdentifier != nil,
+        guard !isRunningTests,
+              Bundle.main.bundleIdentifier != nil,
               !Bundle.main.bundlePath.contains("/.build/")
         else {
             print("ℹ️  Skipping notification permissions request - not running in app bundle")
@@ -776,7 +777,8 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         guard configManager.configuration.enableNotifications else { return }
 
         // Check if we're running in a proper app bundle and not from swift run
-        guard Bundle.main.bundleIdentifier != nil,
+        guard !isRunningTests,
+              Bundle.main.bundleIdentifier != nil,
               !Bundle.main.bundlePath.contains("/.build/")
         else {
             print("ℹ️  Skipping notification - not running in app bundle")
@@ -816,6 +818,17 @@ class MenuBarManager: NSObject, ObservableObject, NSMenuDelegate {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    private var isRunningTests: Bool {
+        let processInfo = ProcessInfo.processInfo
+        let processName = processInfo.processName.lowercased()
+
+        return processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || processName.contains("xctest")
+            || processName.contains("packagetests")
+            || CommandLine.arguments.contains { $0.contains(".xctest") || $0.hasSuffix("/xctest") }
+            || Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
     }
 }
 

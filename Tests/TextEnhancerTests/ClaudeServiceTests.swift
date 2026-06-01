@@ -553,7 +553,7 @@ final class ClaudeServiceTests: XCTestCase {
                 using: "claude-sonnet-4-20250514"
             )
             XCTFail("Should have thrown JSON extraction error")
-        } catch ClaudeError.invalidJSONResponse {
+        } catch ClaudeError.invalidJSONResponse, ClaudeError.invalidJSONResponseWithContext {
             // Then: Should throw invalid JSON response error
             XCTAssertTrue(true)
         } catch {
@@ -754,4 +754,4 @@ final class ClaudeServiceTests: XCTestCase {
             XCTFail("Expected enhanced error, got: \(error)")
         }
     }
-} 
+}

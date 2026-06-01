@@ -96,10 +96,8 @@ class ConfigurationManager: ObservableObject {
             try data.write(to: configFile)
             print("✅ Configuration saved to: \(configFile.path)")
 
-            // Update the published configuration
-            DispatchQueue.main.async {
-                self.configuration = config
-            }
+            // Update in-memory state before notifying observers so handlers can read the new configuration.
+            self.configuration = config
 
             // Post notification for configuration change
             NotificationCenter.default.post(name: .configurationChanged, object: nil)
@@ -219,7 +217,7 @@ struct AppConfiguration: Codable {
                 prompt: "Expand this text with more details, examples, and explanations while maintaining clarity.",
                 provider: .claude,
                 model: "claude-sonnet-4-20250514",
-                includeScreenshot: nil
+                includeScreenshot: false
             ),
             ShortcutConfiguration(
                 id: "describe-screen",
