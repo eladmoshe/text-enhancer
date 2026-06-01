@@ -144,7 +144,14 @@ class ScreenCaptureService {
         return placeholderImage
     }
     
-    func convertImageToBase64(_ image: NSImage, quality: CGFloat = 0.7) -> String? {
+    func convertImageToBase64(_ image: NSImage, quality: CGFloat = 0.7, maxSizeBytes: Int? = nil) -> String? {
+        if let maxSizeBytes,
+           let compressionResult = ImageCompressionService().compressImage(image, quality: quality, maxSize: maxSizeBytes) {
+            let base64String = compressionResult.compressedData.base64EncodedString()
+            print("✅ ScreenCaptureService: Converted image to base64 (\(compressionResult.compressedSize) bytes)")
+            return base64String
+        }
+
         guard let tiffData = image.tiffRepresentation,
               let bitmap = NSBitmapImageRep(data: tiffData) else {
             print("❌ ScreenCaptureService: Failed to get bitmap representation")

@@ -18,15 +18,8 @@ class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
 
     func showMenu() {
         // showMenu invoked
-        #if canImport(XCTest)
-            // When compiled for unit tests, immediately return to avoid using AppKit APIs that
-            // are not safe in the test environment. This compile-time check is more reliable
-            // than relying on runtime environment variables and will be active for all tests
-            // built with Swift Package Manager or Xcode.
-            return
-        #endif
         // Skip UI presentation when running inside unit tests to avoid AppKit restrictions
-        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+        if isRunningTests {
             NSLog("🔧 ShortcutMenuController: Detected test environment, skipping menu UI creation")
             return
         }
@@ -132,7 +125,6 @@ class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
         // to add such a monitor in these scenarios can cause the process to crash
         // with signal 5, which we observed on CI.
 
-        let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         guard !isRunningTests else {
             return // Skip to keep tests stable
         }
@@ -216,5 +208,16 @@ class ShortcutMenuController: NSObject, ObservableObject, NSWindowDelegate {
     deinit {
         removeClickOutsideMonitor()
         hideMenu()
+    }
+
+    private var isRunningTests: Bool {
+        let processInfo = ProcessInfo.processInfo
+        let processName = processInfo.processName.lowercased()
+
+        return processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || processName.contains("xctest")
+            || processName.contains("packagetests")
+            || CommandLine.arguments.contains { $0.contains(".xctest") || $0.hasSuffix("/xctest") }
+            || Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
     }
 }

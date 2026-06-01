@@ -37,12 +37,14 @@ class SettingsViewTests: XCTestCase {
         XCTAssertNotNil(settingsView)
         
         // Should have default shortcut configuration
-        XCTAssertEqual(configManager.configuration.shortcuts.count, 1)
-        XCTAssertEqual(configManager.configuration.shortcuts.first?.name, "Improve Text")
-        XCTAssertEqual(configManager.configuration.shortcuts.first?.provider, .claude)
-        XCTAssertEqual(configManager.configuration.shortcuts.first?.model, "claude-sonnet-4-20250514")
-        XCTAssertEqual(configManager.configuration.shortcuts.first?.keyCode, 18)
-        XCTAssertEqual(configManager.configuration.shortcuts.first?.modifiers, [.control, .option])
+        XCTAssertEqual(configManager.configuration.shortcuts.count, 5)
+
+        let improveTextShortcut = configManager.configuration.shortcuts.first { $0.id == "improve-text" }
+        XCTAssertEqual(improveTextShortcut?.name, "Improve Text")
+        XCTAssertEqual(improveTextShortcut?.provider, .claude)
+        XCTAssertEqual(improveTextShortcut?.model, "claude-sonnet-4-20250514")
+        XCTAssertEqual(improveTextShortcut?.keyCode, 18)
+        XCTAssertEqual(improveTextShortcut?.modifiers, [.control, .option])
     }
     
     func testSettingsViewWithCustomConfiguration() {

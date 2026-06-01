@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Version Management
 
 enum AppVersion {
-    static let buildNumber: Int = 1018
+    static let buildNumber: Int = 1023
     static let version: String = "1.0.3"
     static let fullVersion: String = "\(version) (build \(buildNumber))"
 }
@@ -54,7 +54,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         📅 Started at: \(Date())
 
         """
-        let debugPath = "/Users/elad.moshe/my-code/text-llm-modify/debug.log"
+        let debugPath = "/Users/elad.moshe/Library/Logs/TextEnhancer/debug.log"
         try? debugMessage.write(to: URL(fileURLWithPath: debugPath), atomically: true, encoding: .utf8)
 
         // Hide from dock and prevent main window
