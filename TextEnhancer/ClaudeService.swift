@@ -6,8 +6,13 @@ class ClaudeService: ObservableObject {
     private let cacheManager: ModelCacheManager
     private let apiURL = "https://api.anthropic.com/v1/messages"
     private let modelsURL = "https://api.anthropic.com/v1/models"
-    private let maxTokens = 1000
-    private let timeout: TimeInterval = 30.0
+    private var maxTokens: Int {
+        max(1, configManager.configuration.maxTokens)
+    }
+
+    private var timeout: TimeInterval {
+        max(1.0, configManager.configuration.timeout)
+    }
     
     init(configManager: ConfigurationManager, urlSession: URLSessionProtocol? = nil, cacheManager: ModelCacheManager = ModelCacheManager()) {
         self.configManager = configManager
@@ -18,8 +23,8 @@ class ClaudeService: ObservableObject {
         } else {
             // Create a custom URL session with timeout configuration
             let configuration = URLSessionConfiguration.default
-            configuration.timeoutIntervalForRequest = 30.0
-            configuration.timeoutIntervalForResource = 60.0
+            configuration.timeoutIntervalForRequest = max(1.0, configManager.configuration.timeout)
+            configuration.timeoutIntervalForResource = max(1.0, configManager.configuration.timeout * 2)
             configuration.waitsForConnectivity = false
             
             self.urlSession = URLSession(configuration: configuration)
@@ -285,7 +290,7 @@ class ClaudeService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.timeoutInterval = 30.0
+        request.timeoutInterval = timeout
         request.cachePolicy = .reloadIgnoringLocalCacheData
         
         let basePrompt: String
@@ -379,7 +384,7 @@ class ClaudeService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.timeoutInterval = 30.0
+        request.timeoutInterval = timeout
         request.cachePolicy = .reloadIgnoringLocalCacheData
         
         let (data, response) = try await urlSession.data(for: request)
@@ -612,4 +617,4 @@ enum ClaudeError: LocalizedError {
             return "ClaudeError.invalidJSONResponseWithContext(\(message), \(suggestion))"
         }
     }
-} 
+}
