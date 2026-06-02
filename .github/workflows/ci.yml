@@ -87,7 +87,7 @@ jobs:
         ./build-and-install.sh --help || echo "Build script check completed"
         
     - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: matrix.swift-version == '5.9'
       with:
         name: debug-build-${{ github.sha }}
@@ -203,7 +203,7 @@ jobs:
         tar -czf artifacts/TextEnhancer-${{ github.sha }}.tar.gz TextEnhancer.app/
         
     - name: Upload App Bundle
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: TextEnhancer-bundle-${{ github.sha }}
         path: artifacts/TextEnhancer-*.tar.gz
